@@ -1,0 +1,73 @@
+name: Checks
+
+on:
+  workflow_dispatch:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint_and_test:
+    name: Lint and test
+    runs-on: warp-ubuntu-latest-x64-16x
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          #- beta
+          #- nightly
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      # https://github.com/dtolnay/rust-toolchain
+      - name: Setup rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        
+      # https://github.com/WarpBuilds/rust-cache
+      - name: Run WarpBuilds/rust-cache
+        uses: WarpBuilds/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      # https://github.com/Mozilla-Actions/sccache-action
+      - name: Run sccache-action
+        uses: mozilla-actions/sccache-action@v0.0.5
+
+      - name: Set sccache env vars
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+
+      - name: Install native dependencies
+        run: sudo apt-get install -y libsqlite3-dev
+
+      #######################################################
+      ### This is required while rbuilder repo is private ###
+      #######################################################
+
+      # https://github.com/webfactory/ssh-agent
+      - name: Give GitHub Actions access to rbuilder-private
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.RBUILDER_PRIVATE_DEPLOY_KEY }}
+
+      - name: Configure Git to use deploy key
+        run: |
+          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> $GITHUB_ENV
+          git config --global url."ssh://git@github.com".insteadOf "https://github.com"
+
+      #######################################################
+
+      # lint and test
+      - run: make lint
+      - run: make test
