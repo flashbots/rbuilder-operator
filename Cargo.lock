@@ -5209,16 +5209,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.72",
-]
-
-[[package]]
-name = "metrics_macros"
-version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=66613c9eb68ec0072e5ede5641a53b023ae3d834#66613c9eb68ec0072e5ede5641a53b023ae3d834"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=ef24d9eb2683367055e7984e12e8a15545d68742#ef24d9eb2683367055e7984e12e8a15545d68742"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7094,6 +7085,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=ef24d9eb2683367055e7984e12e8a15545d68742#ef24d9eb2683367055e7984e12e8a15545d68742"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -7143,7 +7135,7 @@ dependencies = [
  "lru",
  "lz4_flex",
  "mempool-dumpster",
- "metrics_macros 0.1.0",
+ "metrics_macros",
  "mev-share-sse",
  "mockall",
  "once_cell",
@@ -7217,7 +7209,7 @@ dependencies = [
  "itertools 0.11.0",
  "jsonrpsee 0.20.3",
  "lazy_static",
- "metrics_macros 0.1.0 (git+https://github.com/flashbots/rbuilder.git?rev=66613c9eb68ec0072e5ede5641a53b023ae3d834)",
+ "metrics_macros",
  "mockall",
  "prometheus",
  "prost",
@@ -7238,7 +7230,6 @@ dependencies = [
  "toml 0.8.19",
  "tonic",
  "tonic-build",
- "tonic-reflection",
  "tower",
  "tracing",
  "tungstenite 0.23.0",
@@ -11413,6 +11404,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=ef24d9eb2683367055e7984e12e8a15545d68742#ef24d9eb2683367055e7984e12e8a15545d68742"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11790,20 +11782,6 @@ dependencies = [
  "prost-build",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "tonic-reflection"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67494bad4dda4c9bffae901dfe14e2b2c0f760adb4706dc10beeb81799f7f7b2"
-dependencies = [
- "bytes",
- "prost",
- "prost-types",
- "tokio",
- "tokio-stream",
- "tonic",
 ]
 
 [[package]]

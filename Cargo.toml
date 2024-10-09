@@ -39,14 +39,15 @@ tonic = "0.8"
 prost = "0.11"
 tokio-stream = { version = "0.1", features = ["net"] }
 futures = "0.3"
-tonic-reflection = "0.6.0"
 tower = "0.4"
 
 
 
-rbuilder = {path="./../rbuilder/crates/rbuilder"}
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "66613c9eb68ec0072e5ede5641a53b023ae3d834"}
-#rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "66613c9eb68ec0072e5ede5641a53b023ae3d834"}
+
+metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "ef24d9eb2683367055e7984e12e8a15545d68742"}
+
+#rbuilder = {path="./../rbuilder/crates/rbuilder"}
+rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "ef24d9eb2683367055e7984e12e8a15545d68742"}
 
 [build-dependencies]
 built = { version = "0.7.1", features = ["git2", "chrono"] }

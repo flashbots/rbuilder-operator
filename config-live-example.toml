@@ -33,32 +33,11 @@ top_bid_ws_url = "env:TOP_BID_WS_URL"
 top_bid_ws_basic_auth = "env:TOP_BID_WS_BASIC_AUTH"
 max_concurrent_seals = 4
 
-# Uncomment this line and remove the [bidding_service] for external bidding service
-#bidding_service_ipc_path = "/tmp/rpc_bidding_server.sock"
+bidding_service_ipc_path = "/tmp/rpc_bidding_server.sock"
 
 [tbv_push_redis]
 url = "env:BIDDING_REDIS_URL"
 channel = "best_true_value"
-
-[bidding_service]
-coinbase_payment_threshold_eth = "0.01"
-take_profit_percentage = 5
-
-[bidding_service.subsidy_config]
-over_bid_delta_eth = "0.00017"
-slot_delta_to_start_subsidy_ms = -1000
-cfg_timestamp_change = "2024-07-11T15:54:22Z"
-
-subsidize_mode = "Forced"
-
-all_blocks_max_true_block_value_eth = "0.04"
-all_blocks_max_subsidy_eth = "0.0015"
-forced_blocks_max_subsidy_eth = "0.002"
-
-max_subsidy_per_block_eth = "0.002"
-min_builder_balance_eth = "1.1"
-max_subsidy_window_val_eth = "1"
-max_subsidy_window_size_minutes = 120
 
 
 [[relays]]

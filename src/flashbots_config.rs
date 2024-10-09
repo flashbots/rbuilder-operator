@@ -35,12 +35,12 @@ use serde_with::serde_as;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, warn};
 
+use crate::best_bid_ws::BestBidWSConnector;
 use crate::bidding_service_wrapper::client::bidding_service_client_adapter::BiddingServiceClientAdapter;
 use crate::block_descriptor_bidding::bidding_service_adapter::BiddingServiceAdapter;
 use crate::blocks_processor::{BlocksProcessorClient, BlocksProcessorClientBidObserver};
 use crate::build_info::rbuilder_version;
 use crate::true_block_value_push::unfinished_block_building_sink_factory_wrapper::UnfinishedBlockBuildingSinkFactoryWrapper;
-use crate::best_bid_ws::BestBidWSConnector;
 
 use clickhouse::Client;
 use std::sync::Arc;
@@ -195,9 +195,7 @@ impl FlashbotsConfig {
         let client = Box::new(
             BiddingServiceClientAdapter::new(&self.bidding_service_ipc_path, landed_blocks_history)
                 .await
-                .map_err(|e| {
-                    eyre::Report::new(e).wrap_err("Unable to connect to remote bidder")
-                })?,
+                .map_err(|e| eyre::Report::new(e).wrap_err("Unable to connect to remote bidder"))?,
         );
         Ok(Box::new(BiddingServiceAdapter::new(client)))
     }
