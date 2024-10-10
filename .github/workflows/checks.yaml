@@ -52,21 +52,6 @@ jobs:
         run: sudo apt-get install -y libsqlite3-dev
 
       #######################################################
-      ### This is required while rbuilder repo is private ###
-      #######################################################
-
-      # https://github.com/webfactory/ssh-agent
-      - name: Give GitHub Actions access to rbuilder-private
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.RBUILDER_PRIVATE_DEPLOY_KEY }}
-
-      - name: Configure Git to use deploy key
-        run: |
-          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> $GITHUB_ENV
-          git config --global url."ssh://git@github.com".insteadOf "https://github.com"
-
-      #######################################################
 
       # lint and test
       - run: make lint
