@@ -192,8 +192,8 @@ impl BiddingServiceClientAdapter {
     /// return result is error
     fn handle_error(result: tonic::Result<tonic::Response<Empty>>) -> bool {
         if let Err(error) = &result {
-            error!(error=?error,"RPC call error");
-            true
+            error!(error=?error,"RPC call error, killing process so it reconnects");
+            std::process::exit(1);
         } else {
             false
         }
