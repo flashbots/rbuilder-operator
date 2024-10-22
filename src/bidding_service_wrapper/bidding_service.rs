@@ -1,3 +1,14 @@
+/// Mapping of build_info::Version
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BidderVersionInfo {
+    #[prost(string, tag = "1")]
+    pub git_commit: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub git_ref: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub build_time_utc: ::prost::alloc::string::String,
+}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Empty {}
@@ -190,10 +201,11 @@ pub mod bidding_service_client {
             self
         }
         /// Call after connection before calling anything. This will really create the BiddingService on the server side.
+        /// Returns the version info for the server side.
         pub async fn initialize(
             &mut self,
             request: impl tonic::IntoRequest<super::LandedBlocksParams>,
-        ) -> Result<tonic::Response<super::Empty>, tonic::Status> {
+        ) -> Result<tonic::Response<super::BidderVersionInfo>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -358,10 +370,11 @@ pub mod bidding_service_server {
     #[async_trait]
     pub trait BiddingService: Send + Sync + 'static {
         /// Call after connection before calling anything. This will really create the BiddingService on the server side.
+        /// Returns the version info for the server side.
         async fn initialize(
             &self,
             request: tonic::Request<super::LandedBlocksParams>,
-        ) -> Result<tonic::Response<super::Empty>, tonic::Status>;
+        ) -> Result<tonic::Response<super::BidderVersionInfo>, tonic::Status>;
         /// Server streaming response type for the CreateSlotBidder method.
         type CreateSlotBidderStream: futures_core::Stream<
                 Item = Result<super::Callback, tonic::Status>,
@@ -476,7 +489,7 @@ pub mod bidding_service_server {
                         T: BiddingService,
                     > tonic::server::UnaryService<super::LandedBlocksParams>
                     for InitializeSvc<T> {
-                        type Response = super::Empty;
+                        type Response = super::BidderVersionInfo;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,

@@ -1,6 +1,9 @@
 use alloy_primitives::U256;
-use rbuilder::live_builder::block_output::bidding::interfaces::{
-    BiddingServiceWinControl, LandedBlockInfo as RealLandedBlockInfo,
+use rbuilder::{
+    live_builder::block_output::bidding::interfaces::{
+        BiddingServiceWinControl, LandedBlockInfo as RealLandedBlockInfo,
+    },
+    utils::build_info::Version,
 };
 use std::{
     path::PathBuf,
@@ -19,6 +22,7 @@ use crate::{
         MustWinBlockParams, NewBlockParams, UpdateNewBidParams,
     },
     block_descriptor_bidding::traits::{Bid, BidMaker, BiddingService, BlockId, SlotBidder},
+    metrics::set_bidding_service_version,
 };
 
 use super::slot_bidder_client::SlotBidderClient;
@@ -102,10 +106,16 @@ impl BiddingServiceClientAdapter {
                 .map(real2rpc_landed_block_info)
                 .collect(),
         };
-        client
+        let bidding_service_version = client
             .initialize(init_params)
             .await
             .map_err(|_| Error::InitFailed)?;
+        let bidding_service_version = bidding_service_version.into_inner();
+        set_bidding_service_version(Version {
+            git_commit: bidding_service_version.git_commit,
+            git_ref: bidding_service_version.git_ref,
+            build_time_utc: bidding_service_version.build_time_utc,
+        });
         let (commands_sender, mut rx) = mpsc::unbounded_channel::<BiddingServiceClientCommand>();
         // Spawn a task to execute received futures
         tokio::spawn(async move {
