@@ -44,10 +44,10 @@ tower = "0.4"
 
 
 
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "ef24d9eb2683367055e7984e12e8a15545d68742"}
+metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "d96e7215483bac0ab145459f4ddaa811d99459d6"}
 
 #rbuilder = {path="./../rbuilder/crates/rbuilder"}
-rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "ef24d9eb2683367055e7984e12e8a15545d68742"}
+rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "d96e7215483bac0ab145459f4ddaa811d99459d6"}
 
 [build-dependencies]
 built = { version = "0.7.1", features = ["git2", "chrono"] }
