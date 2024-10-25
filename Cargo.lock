@@ -2051,6 +2051,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1137cd7e7fc0fb5d3c5a8678be38ec56e819125d8d7907411fe24ccb943faca8"
+dependencies = [
+ "crossbeam-channel",
+ "crossbeam-deque",
+ "crossbeam-epoch",
+ "crossbeam-queue",
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-channel"
 version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5209,7 +5222,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=d96e7215483bac0ab145459f4ddaa811d99459d6#d96e7215483bac0ab145459f4ddaa811d99459d6"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=ccd9cb5401c68d9804f7ae701e86cb6fd82a153b#ccd9cb5401c68d9804f7ae701e86cb6fd82a153b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7085,7 +7098,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=d96e7215483bac0ab145459f4ddaa811d99459d6#d96e7215483bac0ab145459f4ddaa811d99459d6"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=ccd9cb5401c68d9804f7ae701e86cb6fd82a153b#ccd9cb5401c68d9804f7ae701e86cb6fd82a153b"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -7112,9 +7125,11 @@ dependencies = [
  "bigdecimal 0.4.5",
  "built",
  "clap",
+ "crossbeam",
  "crossbeam-queue",
  "csv",
  "ctor",
+ "dashmap 6.1.0",
  "derivative",
  "eth-sparse-mpt",
  "ethereum-consensus",
@@ -7139,6 +7154,7 @@ dependencies = [
  "mev-share-sse",
  "mockall",
  "once_cell",
+ "parking_lot 0.12.3",
  "primitive-types",
  "priority-queue",
  "prometheus",
@@ -11404,7 +11420,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=d96e7215483bac0ab145459f4ddaa811d99459d6#d96e7215483bac0ab145459f4ddaa811d99459d6"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=ccd9cb5401c68d9804f7ae701e86cb6fd82a153b#ccd9cb5401c68d9804f7ae701e86cb6fd82a153b"
 dependencies = [
  "proc-macro2",
  "quote",

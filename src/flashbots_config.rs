@@ -3,7 +3,7 @@
 //! @Pending make this copy/paste generic code on the library
 use eyre::Context;
 use jsonrpsee::RpcModule;
-use rbuilder::building::builders::merging_builder::merging_build_backtest;
+use rbuilder::building::builders::parallel_builder::parallel_build_backtest;
 use rbuilder::building::builders::UnfinishedBlockBuildingSinkFactory;
 use rbuilder::live_builder::base_config::EnvOrValue;
 use rbuilder::live_builder::block_output::bid_observer::{BidObserver, NullBidObserver};
@@ -19,6 +19,7 @@ use rbuilder::live_builder::config::{
 };
 use rbuilder::live_builder::watchdog::spawn_watchdog_thread;
 use rbuilder::primitives::mev_boost::MevBoostRelay;
+use rbuilder::utils::ProviderFactoryReopener;
 use rbuilder::{
     building::builders::{BacktestSimulateBlockInput, Block},
     live_builder::{
@@ -28,8 +29,8 @@ use rbuilder::{
     utils::build_info::Version,
 };
 use reth::payload::database::CachedReads;
-use reth::providers::ProviderFactory;
-use reth_db::DatabaseEnv;
+use reth::providers::{DatabaseProviderFactory, ProviderFactory, StateProviderFactory};
+use reth_db::{Database, DatabaseEnv};
 use serde::Deserialize;
 use serde_with::serde_as;
 use tokio_util::sync::CancellationToken;
@@ -105,11 +106,17 @@ impl LiveBuilderConfig for FlashbotsConfig {
         &self.base_config
     }
 
-    async fn create_builder(
+    async fn new_builder(
         &self,
-        cancellation_token: CancellationToken,
-    ) -> eyre::Result<LiveBuilder<Arc<DatabaseEnv>, MevBoostSlotDataGenerator>> {
-        let provider_factory = self.base_config.provider_factory()?;
+        cancellation_token: tokio_util::sync::CancellationToken,
+    ) -> eyre::Result<
+        LiveBuilder<
+            ProviderFactoryReopener<Arc<DatabaseEnv>>,
+            Arc<DatabaseEnv>,
+            MevBoostSlotDataGenerator,
+        >,
+    > {
+        let provider_factory = self.base_config.create_provider_factory()?;
 
         let (sink_factory, relays, bidding_service_win_control) = self
             .create_sink_factory_and_relays(
@@ -157,11 +164,15 @@ impl LiveBuilderConfig for FlashbotsConfig {
     }
 
     /// @Pending fix this ugly copy/paste
-    fn build_backtest_block(
+    fn build_backtest_block<P, DB>(
         &self,
         building_algorithm_name: &str,
-        input: BacktestSimulateBlockInput<'_, Arc<DatabaseEnv>>,
-    ) -> eyre::Result<(Block, CachedReads)> {
+        input: BacktestSimulateBlockInput<'_, P>,
+    ) -> eyre::Result<(Block, CachedReads)>
+    where
+        DB: Database + Clone + 'static,
+        P: DatabaseProviderFactory<DB> + StateProviderFactory + Clone + 'static,
+    {
         let builder_cfg = self.builder(building_algorithm_name)?;
         match builder_cfg.builder {
             SpecificBuilderConfig::OrderingBuilder(config) => {
@@ -169,7 +180,9 @@ impl LiveBuilderConfig for FlashbotsConfig {
                     config, input,
                 )
             }
-            SpecificBuilderConfig::MergingBuilder(config) => merging_build_backtest(input, config),
+            SpecificBuilderConfig::ParallelBuilder(config) => {
+                parallel_build_backtest(input, config)
+            }
         }
     }
 }
