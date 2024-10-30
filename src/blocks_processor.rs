@@ -1,6 +1,8 @@
-use alloy_json_rpc::RpcError;
 use alloy_primitives::{BlockHash, U256};
-use alloy_provider::Provider;
+use jsonrpsee::{
+    core::{client::ClientT, traits::ToRpcParams},
+    http_client::{HttpClient, HttpClientBuilder},
+};
 use rbuilder::{
     building::BuiltBlockTrace,
     live_builder::block_output::bid_observer::BidObserver,
@@ -9,10 +11,11 @@ use rbuilder::{
         serialize::{RawBundle, RawShareBundle},
         Order,
     },
-    utils::{error_storage::store_error_event, http_provider, BoxedProvider},
+    utils::error_storage::store_error_event,
 };
 use reth::primitives::SealedBlock;
 use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
 use serde_with::{serde_as, DisplayFromStr};
 use std::sync::Arc;
 use time::format_description::well_known;
@@ -21,11 +24,8 @@ use tracing::{debug, error, warn, Span};
 use crate::metrics::inc_blocks_api_errors;
 
 const BLOCK_PROCESSOR_ERROR_CATEGORY: &str = "block_processor";
-
-#[derive(Debug, Clone)]
-pub struct BlocksProcessorClient {
-    client: Arc<BoxedProvider>,
-}
+const DEFAULT_BLOCK_CONSUME_BUILT_BLOCK_METHOD: &str = "block_consumeBuiltBlockV2";
+pub const SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD: &str = "flashbots_consumeBuiltBlockV2";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,13 +64,68 @@ struct BlocksProcessorHeader {
     pub number: Option<U256>,
 }
 
-impl BlocksProcessorClient {
+type ConsumeBuiltBlockRequest = (
+    BlocksProcessorHeader,
+    String,
+    String,
+    Vec<UsedBundle>,
+    Vec<UsedBundle>,
+    Vec<UsedSbundle>,
+    reth::rpc::types::beacon::relay::BidTrace,
+    String,
+    U256,
+    U256,
+);
+
+/// Struct to avoid copying ConsumeBuiltBlockRequest since HttpClient::request eats the parameter.
+#[derive(Clone)]
+struct ConsumeBuiltBlockRequestArc {
+    inner: Arc<ConsumeBuiltBlockRequest>,
+}
+
+impl ConsumeBuiltBlockRequestArc {
+    fn new(request: ConsumeBuiltBlockRequest) -> Self {
+        Self {
+            inner: Arc::new(request),
+        }
+    }
+    fn as_ref(&self) -> &ConsumeBuiltBlockRequest {
+        self.inner.as_ref()
+    }
+}
+
+impl ToRpcParams for ConsumeBuiltBlockRequestArc {
+    fn to_rpc_params(self) -> Result<Option<Box<RawValue>>, jsonrpsee::core::Error> {
+        let json = serde_json::to_string(self.inner.as_ref())
+            .map_err(jsonrpsee::core::Error::ParseError)?;
+        RawValue::from_string(json)
+            .map(Some)
+            .map_err(jsonrpsee::core::Error::ParseError)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BlocksProcessorClient<HttpClientType> {
+    client: HttpClientType,
+    consume_built_block_method: &'static str,
+}
+
+impl BlocksProcessorClient<HttpClient> {
     pub fn try_from(url: &str) -> eyre::Result<Self> {
         Ok(Self {
-            client: Arc::new(http_provider(url.parse()?)),
+            client: HttpClientBuilder::default().build(url)?,
+            consume_built_block_method: DEFAULT_BLOCK_CONSUME_BUILT_BLOCK_METHOD,
         })
     }
+}
 
+impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
+    pub fn new(client: HttpClientType, consume_built_block_method: &'static str) -> Self {
+        Self {
+            client,
+            consume_built_block_method,
+        }
+    }
     pub async fn submit_built_block(
         &self,
         sealed_block: &SealedBlock,
@@ -115,7 +170,7 @@ impl BlocksProcessorClient {
 
         let used_share_bundles = Self::get_used_sbundles(built_block_trace);
 
-        let params = (
+        let params: ConsumeBuiltBlockRequest = (
             header,
             closed_at,
             sealed_at,
@@ -127,56 +182,45 @@ impl BlocksProcessorClient {
             built_block_trace.true_bid_value,
             best_bid_value,
         );
-
+        let request = ConsumeBuiltBlockRequestArc::new(params);
         match self
             .client
-            .raw_request("block_consumeBuiltBlockV2".into(), &params)
+            .request(self.consume_built_block_method, request.clone())
             .await
         {
             Ok(()) => {}
             Err(err) => {
-                match &err {
-                    RpcError::ErrorResp(err) => {
-                        error!(err = ?err, "Block processor returned error");
-                        store_error_event(
-                            BLOCK_PROCESSOR_ERROR_CATEGORY,
-                            &err.to_string(),
-                            &params,
-                        );
-                    }
-                    RpcError::SerError(err) => {
-                        error!(err = ?err, "Failed to serialize block processor request");
-                    }
-                    RpcError::DeserError { err, text } => {
-                        if !(text.contains("504 Gateway Time-out")
-                            || text.contains("502 Bad Gateway"))
-                        {
-                            error!(err = ?err, "Failed to deserialize block processor response");
-                            store_error_event(
-                                BLOCK_PROCESSOR_ERROR_CATEGORY,
-                                &err.to_string(),
-                                &params,
-                            );
-                        }
-                    }
-                    RpcError::Transport(err) => {
-                        debug!(err = ?err, "Failed to send block processor request");
-                    }
-                    RpcError::NullResp => {
-                        error!("Block processor returned null response");
-                    }
-                    RpcError::UnsupportedFeature(err) => {
-                        error!(err = ?err, "Unsupported feature");
-                    }
-                    RpcError::LocalUsageError(err) => {
-                        error!(err = ?err, "Local usage error");
-                    }
-                }
+                Self::handle_rpc_error(&err, request.as_ref());
                 return Err(err.into());
             }
         }
 
         Ok(())
+    }
+
+    /// T is parametric just because it too BIG to type
+    fn handle_rpc_error(err: &jsonrpsee::core::Error, request: &ConsumeBuiltBlockRequest) {
+        match err {
+            jsonrpsee::core::Error::Call(error_object) => {
+                error!(err = ?error_object, "Block processor returned error");
+                store_error_event(BLOCK_PROCESSOR_ERROR_CATEGORY, &err.to_string(), request);
+            }
+            jsonrpsee::core::Error::Transport(_) => {
+                debug!(err = ?err, "Failed to send block processor request");
+            }
+            jsonrpsee::core::Error::ParseError(error) => {
+                error!(err = ?err, "Failed to deserialize block processor response");
+                let error_txt = error.to_string();
+                if !(error_txt.contains("504 Gateway Time-out")
+                    || error_txt.contains("502 Bad Gateway"))
+                {
+                    store_error_event(BLOCK_PROCESSOR_ERROR_CATEGORY, &err.to_string(), request);
+                }
+            }
+            _ => {
+                error!(err = ?err, "Block processor error");
+            }
+        }
     }
 
     /// Gets the UsedSbundle carefully considering virtual orders formed by other original orders.
@@ -229,17 +273,19 @@ impl BlocksProcessorClient {
 
 /// BidObserver sending all data to a BlocksProcessorClient
 #[derive(Debug)]
-pub struct BlocksProcessorClientBidObserver {
-    client: BlocksProcessorClient,
+pub struct BlocksProcessorClientBidObserver<HttpClientType> {
+    client: BlocksProcessorClient<HttpClientType>,
 }
 
-impl BlocksProcessorClientBidObserver {
-    pub fn new(client: BlocksProcessorClient) -> Self {
+impl<HttpClientType> BlocksProcessorClientBidObserver<HttpClientType> {
+    pub fn new(client: BlocksProcessorClient<HttpClientType>) -> Self {
         Self { client }
     }
 }
 
-impl BidObserver for BlocksProcessorClientBidObserver {
+impl<HttpClientType: ClientT + Clone + Send + Sync + std::fmt::Debug + 'static> BidObserver
+    for BlocksProcessorClientBidObserver<HttpClientType>
+{
     fn block_submitted(
         &self,
         sealed_block: SealedBlock,

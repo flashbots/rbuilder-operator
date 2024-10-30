@@ -1,7 +1,10 @@
 //! Config should always be deserializable, default values should be used
 //! This code has lots of copy/paste from the example config but it's not really copy/paste since we use our own private types.
 //! @Pending make this copy/paste generic code on the library
+use alloy_signer_local::PrivateKeySigner;
 use eyre::Context;
+use http::StatusCode;
+use jsonrpsee::http_client::HttpClientBuilder;
 use jsonrpsee::RpcModule;
 use rbuilder::building::builders::merging_builder::merging_build_backtest;
 use rbuilder::building::builders::UnfinishedBlockBuildingSinkFactory;
@@ -33,13 +36,19 @@ use reth_db::DatabaseEnv;
 use serde::Deserialize;
 use serde_with::serde_as;
 use tokio_util::sync::CancellationToken;
+use tower::ServiceBuilder;
 use tracing::{error, warn};
+use url::Url;
 
 use crate::best_bid_ws::BestBidWSConnector;
 use crate::bidding_service_wrapper::client::bidding_service_client_adapter::BiddingServiceClientAdapter;
 use crate::block_descriptor_bidding::bidding_service_adapter::BiddingServiceAdapter;
-use crate::blocks_processor::{BlocksProcessorClient, BlocksProcessorClientBidObserver};
+use crate::blocks_processor::{
+    BlocksProcessorClient, BlocksProcessorClientBidObserver,
+    SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD,
+};
 use crate::build_info::rbuilder_version;
+use crate::flashbots_signer::FlashbotsSignerLayer;
 use crate::true_block_value_push::unfinished_block_building_sink_factory_wrapper::UnfinishedBlockBuildingSinkFactoryWrapper;
 
 use clickhouse::Client;
@@ -94,9 +103,12 @@ pub struct FlashbotsConfig {
     /// selected builder configurations
     pub builders: Vec<BuilderConfig>,
 
+    /// If this is Some then signed mode is used for blocks_processor and tbv_push is done via blocks_processor_url (signed block-processor also handles flashbots_reportBestTrueValue)
+    pub key_registration_url: Option<String>,
+
     pub blocks_processor_url: Option<String>,
 
-    /// For production should always be Some since it's used by smart-multiplexing.
+    /// For production: Some <=> key_registration_url is Some since it's used by smart-multiplexing.
     tbv_push_redis: Option<TBVPushRedisConfig>,
 }
 
@@ -184,6 +196,16 @@ async fn handle_subsidise_block(
     };
 }
 
+#[derive(thiserror::Error, Debug)]
+enum RegisterKeyError {
+    #[error("Register key error parsing url: {0:?}")]
+    UrlParse(#[from] url::ParseError),
+    #[error("Register key network error: {0:?}")]
+    Network(#[from] reqwest::Error),
+    #[error("Register key service error: {0:?}")]
+    Service(StatusCode),
+}
+
 impl FlashbotsConfig {
     /// Returns the BiddingService + an optional FlashbotsBlockSubsidySelector so smart multiplexing can force blocks.
     /// FlashbotsBlockSubsidySelector can be None if subcidy is disabled.
@@ -200,6 +222,59 @@ impl FlashbotsConfig {
         Ok(Box::new(BiddingServiceAdapter::new(client)))
     }
 
+    /// Creates a new PrivateKeySigner and registers the associated address on key_registration_url
+    async fn register_key(
+        &self,
+        key_registration_url: &str,
+    ) -> Result<PrivateKeySigner, RegisterKeyError> {
+        let signer = PrivateKeySigner::random();
+        let client = reqwest::Client::new();
+        let url = {
+            let mut url = Url::parse(key_registration_url)?;
+            url.set_path("/api/l1-builder/v1/register_credentials/rbuilder");
+            url
+        };
+        let body = format!("{{ \"ecdsa_pubkey_address\": \"{}\" }}", signer.address());
+        let res = client.post(url).body(body).send().await?;
+        if res.status().is_success() {
+            Ok(signer)
+        } else {
+            Err(RegisterKeyError::Service(res.status()))
+        }
+    }
+
+    /// Depending on the cfg may create:
+    /// - Dummy sink (no blocks_processor_url)
+    /// - Standard block processor client
+    /// - Secure block processor client (using block_processor_key to sign)
+    fn create_block_processor_client(
+        &self,
+        block_processor_key: Option<PrivateKeySigner>,
+    ) -> eyre::Result<Box<dyn BidObserver + Send + Sync>> {
+        let bid_observer: Box<dyn BidObserver + Send + Sync> =
+            if let Some(url) = &self.blocks_processor_url {
+                if let Some(block_processor_key) = block_processor_key {
+                    let signing_middleware = FlashbotsSignerLayer::new(block_processor_key);
+                    let service_builder = ServiceBuilder::new()
+                        // map signer errors to http errors
+                        .map_err(jsonrpsee::http_client::transport::Error::Http)
+                        .layer(signing_middleware);
+                    let client = HttpClientBuilder::default()
+                        .set_middleware(service_builder)
+                        .build(url)?;
+                    let block_processor =
+                        BlocksProcessorClient::new(client, SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD);
+                    Box::new(BlocksProcessorClientBidObserver::new(block_processor))
+                } else {
+                    let client = BlocksProcessorClient::try_from(url)?;
+                    Box::new(BlocksProcessorClientBidObserver::new(client))
+                }
+            } else {
+                Box::new(NullBidObserver {})
+            };
+        Ok(bid_observer)
+    }
+
     /// Connects (UnfinishedBlockBuildingSinkFactoryWrapper->BlockSealingBidderFactory)->RelaySubmitSinkFactory
     /// RelaySubmitSinkFactory: submits final blocks to relays
     /// BlockSealingBidderFactory: performs sealing/bidding. Sends bids to the RelaySubmitSinkFactory
@@ -214,14 +289,13 @@ impl FlashbotsConfig {
         Vec<MevBoostRelay>,
         Arc<dyn BiddingServiceWinControl>,
     )> {
+        let block_processor_key = if let Some(key_registration_url) = &self.key_registration_url {
+            Some(self.register_key(key_registration_url).await?)
+        } else {
+            None
+        };
         // RelaySubmitSinkFactory
-        let bid_observer: Box<dyn BidObserver + Send + Sync> =
-            if let Some(url) = &self.blocks_processor_url {
-                let client = BlocksProcessorClient::try_from(url)?;
-                Box::new(BlocksProcessorClientBidObserver::new(client))
-            } else {
-                Box::new(NullBidObserver {})
-            };
+        let bid_observer = self.create_block_processor_client(block_processor_key)?;
         let (sink_sealed_factory, relays) = self
             .l1_config
             .create_relays_sealed_sink_factory(self.base_config.chain_spec()?, bid_observer)?;
