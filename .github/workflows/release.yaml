@@ -90,14 +90,14 @@ jobs:
         with:
           cache-on-failure: true
 
-      # https://github.com/Mozilla-Actions/sccache-action
-      - name: Setup sccache-action
-        uses: mozilla-actions/sccache-action@v0.0.5
+      # # https://github.com/Mozilla-Actions/sccache-action
+      # - name: Setup sccache-action
+      #   uses: mozilla-actions/sccache-action@v0.0.5
 
-      - name: Set env vars
-        run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+      # - name: Set env vars
+      #   run: |
+      #     echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+      #     echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
 
       - name: Prepare output filename
         run: |
