@@ -11,7 +11,8 @@ use redis::RedisError;
 use tokio_util::sync::CancellationToken;
 
 use super::{
-    best_true_value_redis::{BestTrueValueCell, BestTrueValueRedisSync},
+    best_true_value_pusher::{BestTrueValueCell, BestTrueValuePusher},
+    redis_backend::RedisBackend,
     unfinished_block_building_sink_wrapper::UnfinishedBlockBuildingSinkWrapper,
 };
 
@@ -43,12 +44,9 @@ impl UnfinishedBlockBuildingSinkFactoryWrapper {
         let best_local_value = BestTrueValueCell::default();
         let best_true_value_redis = redis::Client::open(tbv_push_redis_url)?;
 
-        let redis_sync = BestTrueValueRedisSync::new(
-            best_local_value.clone(),
-            best_true_value_redis,
-            tbv_push_redis_channel,
-            cancellation_token,
-        );
+        let redis_backend = RedisBackend::new(best_true_value_redis, tbv_push_redis_channel);
+        let redis_sync =
+            BestTrueValuePusher::new(best_local_value.clone(), redis_backend, cancellation_token);
         std::thread::spawn(move || redis_sync.run_push_task());
 
         Ok(UnfinishedBlockBuildingSinkFactoryWrapper {
