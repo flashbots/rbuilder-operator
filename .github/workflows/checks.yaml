@@ -13,7 +13,7 @@ env:
 jobs:
   lint_and_test:
     name: Lint and test
-    runs-on: warp-ubuntu-latest-x64-16x
+    runs-on: warp-ubuntu-2204-x64-16x
     strategy:
       matrix:
         toolchain:
@@ -32,7 +32,7 @@ jobs:
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
-        
+
       # https://github.com/WarpBuilds/rust-cache
       - name: Run WarpBuilds/rust-cache
         uses: WarpBuilds/rust-cache@v2
