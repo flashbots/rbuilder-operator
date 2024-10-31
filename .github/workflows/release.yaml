@@ -106,7 +106,11 @@ jobs:
           echo "Filename: ${OUTPUT_FILENAME}"
 
       - name: Build rbuilder binary
-        run: cargo build --release
+        run: |
+          rustup show
+          rustc --version
+          cargo --version
+          cargo build --release --verbose
 
       - name: Prepare artifacts
         run: |
