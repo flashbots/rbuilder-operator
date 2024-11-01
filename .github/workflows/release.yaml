@@ -116,7 +116,7 @@ jobs:
         run: cargo install cross
 
       - name: Build binary
-        run: cross build --release --target ${{ matrix.configs.target }}
+        run: cross build --release --target ${{ matrix.configs.target }} --features openssl/vendored
 
       # - name: Build rbuilder binary
       #   run: |
