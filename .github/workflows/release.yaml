@@ -24,7 +24,7 @@ jobs:
   #
   extract-version:
     name: Extract version
-    runs-on: warp-ubuntu-2404-x64-16x
+    runs-on: warp-ubuntu-latest-x64-16x
     outputs:
       VERSION: ${{ steps.extract_version.outputs.VERSION }}
     steps:
@@ -66,8 +66,10 @@ jobs:
     strategy:
       matrix:
         configs:
-          - target: x86_64-unknown-linux-gnu
-            runner: warp-ubuntu-2404-x64-16x
+          - target: x86_64-unknown-linux-musl
+            runner: warp-ubuntu-latest-x64-16x
+          # - target: x86_64-unknown-linux-gnu
+          #   runner: warp-ubuntu-latest-x64-16x
           # - target: aarch64-apple-darwin
           #   runner: warp-macos-14-arm64-6x
 
@@ -77,12 +79,17 @@ jobs:
 
       # https://github.com/dtolnay/rust-toolchain
       - name: Setup rust toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.configs.target }}
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
+
+      - name: Install musl-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
 
       # # https://github.com/WarpBuilds/rust-cache
       # - name: Run WarpBuilds/rust-cache
@@ -107,12 +114,12 @@ jobs:
 
       - name: Build rbuilder binary
         run: |
-          rustup show
-          rustup component add rust-src  # needed for stdlib source
-          rustc --version
-          cargo --version
-          # RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --verbose
-          RUSTFLAGS="-C target-feature=+crt-static" cargo build --target ${{ matrix.configs.target }} --release -Z build-std --verbose
+          # rustup show
+          # rustup component add rust-src  # needed for stdlib source
+          # rustc --version
+          # cargo --version
+          # RUSTFLAGS="-C target-feature=+crt-static" cargo build --target ${{ matrix.configs.target }} --release -Z build-std --verbose
+          cargo build --release --target x86_64-unknown-linux-musl --verbose
 
       - name: Prepare artifacts
         run: |
@@ -134,7 +141,7 @@ jobs:
     name: Draft release
     if: ${{ github.event.inputs.draft-release == 'true' || github.event_name == 'push'}} # when manually triggered or version tagged
     needs: [extract-version, build-binary]
-    runs-on: warp-ubuntu-2404-x64-16x
+    runs-on: warp-ubuntu-latest-x64-16x
     env:
       VERSION: ${{ needs.extract-version.outputs.VERSION }}
     permissions:
