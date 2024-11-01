@@ -113,7 +113,7 @@ pub trait Backend {
     fn publish(
         &self,
         connection: &mut Self::Connection,
-        data: &str,
+        best_true_value: &BestTrueValue,
     ) -> Result<(), Self::BackendError>;
 }
 
@@ -134,7 +134,7 @@ impl<BackendType: Backend> BestTrueValuePusher<BackendType> {
     /// The value is read from best_local_value and pushed to redis.
     pub fn run_push_task(self) {
         run_loop_with_reconnect(
-            "redis_push_best_bid",
+            "push_best_bid",
             || -> Result<BackendType::Connection, BackendType::BackendError> {
                 self.backend.connect()
             },
@@ -157,20 +157,9 @@ impl<BackendType: Backend> BestTrueValuePusher<BackendType> {
                         .map_or(true, |value| !value.is_same_bid_info(&best_local_value))
                     {
                         last_pushed_value = Some(best_local_value.clone());
-                        let value = match serde_json::to_string(&best_local_value) {
-                            Ok(value) => value,
-                            Err(err) => {
-                                error!(
-                                    ?err,
-                                    ?best_local_value,
-                                    "Failed to serialize best true value bid"
-                                );
-                                continue;
-                            }
-                        };
-                        match self.backend.publish(&mut conn, &value) {
+                        match self.backend.publish(&mut conn, &best_local_value) {
                             Ok(()) => {
-                                trace!(?best_local_value, "Pushed best local value to redis");
+                                trace!(?best_local_value, "Pushed best local value");
                             }
                             Err(err) => {
                                 error!(?err, "Failed to publish best true value bid");

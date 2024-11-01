@@ -4,7 +4,6 @@
 use alloy_signer_local::PrivateKeySigner;
 use eyre::Context;
 use http::StatusCode;
-use jsonrpsee::http_client::HttpClientBuilder;
 use jsonrpsee::RpcModule;
 use rbuilder::building::builders::merging_builder::merging_build_backtest;
 use rbuilder::building::builders::UnfinishedBlockBuildingSinkFactory;
@@ -36,7 +35,6 @@ use reth_db::DatabaseEnv;
 use serde::Deserialize;
 use serde_with::serde_as;
 use tokio_util::sync::CancellationToken;
-use tower::ServiceBuilder;
 use tracing::{error, warn};
 use url::Url;
 
@@ -48,7 +46,6 @@ use crate::blocks_processor::{
     SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD,
 };
 use crate::build_info::rbuilder_version;
-use crate::flashbots_signer::FlashbotsSignerLayer;
 use crate::true_block_value_push::unfinished_block_building_sink_factory_wrapper::UnfinishedBlockBuildingSinkFactoryWrapper;
 
 use clickhouse::Client;
@@ -103,12 +100,16 @@ pub struct FlashbotsConfig {
     /// selected builder configurations
     pub builders: Vec<BuilderConfig>,
 
-    /// If this is Some then signed mode is used for blocks_processor and tbv_push is done via blocks_processor_url (signed block-processor also handles flashbots_reportBestTrueValue)
+    /// If this is Some then blocks_processor_url MUST be some and:
+    /// - signed mode is used for blocks_processor.
+    /// - tbv_push is done via blocks_processor_url (signed block-processor also handles flashbots_reportBestTrueValue).
     pub key_registration_url: Option<String>,
 
     pub blocks_processor_url: Option<String>,
 
-    /// For production: Some <=> key_registration_url is Some since it's used by smart-multiplexing.
+    /// Cfg to push tbv to redis.
+    /// For production we always need some tbv push (since it's used by smart-multiplexing.) so:
+    /// !Some(key_registration_url) => Some(tbv_push_redis)
     tbv_push_redis: Option<TBVPushRedisConfig>,
 }
 
@@ -251,28 +252,29 @@ impl FlashbotsConfig {
         &self,
         block_processor_key: Option<PrivateKeySigner>,
     ) -> eyre::Result<Box<dyn BidObserver + Send + Sync>> {
-        let bid_observer: Box<dyn BidObserver + Send + Sync> =
-            if let Some(url) = &self.blocks_processor_url {
-                if let Some(block_processor_key) = block_processor_key {
-                    let signing_middleware = FlashbotsSignerLayer::new(block_processor_key);
-                    let service_builder = ServiceBuilder::new()
-                        // map signer errors to http errors
-                        .map_err(jsonrpsee::http_client::transport::Error::Http)
-                        .layer(signing_middleware);
-                    let client = HttpClientBuilder::default()
-                        .set_middleware(service_builder)
-                        .build(url)?;
-                    let block_processor =
-                        BlocksProcessorClient::new(client, SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD);
-                    Box::new(BlocksProcessorClientBidObserver::new(block_processor))
-                } else {
-                    let client = BlocksProcessorClient::try_from(url)?;
-                    Box::new(BlocksProcessorClientBidObserver::new(client))
-                }
+        let bid_observer: Box<dyn BidObserver + Send + Sync> = if let Some(url) =
+            &self.blocks_processor_url
+        {
+            if let Some(block_processor_key) = block_processor_key {
+                let client = crate::signed_http_client::create_client(url, block_processor_key)?;
+                let block_processor =
+                    BlocksProcessorClient::new(client, SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD);
+                Box::new(BlocksProcessorClientBidObserver::new(block_processor))
             } else {
-                Box::new(NullBidObserver {})
-            };
+                let client = BlocksProcessorClient::try_from(url)?;
+                Box::new(BlocksProcessorClientBidObserver::new(client))
+            }
+        } else {
+            if block_processor_key.is_some() {
+                return Self::bail_blocks_processor_url_not_set();
+            }
+            Box::new(NullBidObserver {})
+        };
         Ok(bid_observer)
+    }
+
+    fn bail_blocks_processor_url_not_set<T>() -> Result<T, eyre::Report> {
+        eyre::bail!("blocks_processor_url should always be set if key_registration_url is set");
     }
 
     /// Connects (UnfinishedBlockBuildingSinkFactoryWrapper->BlockSealingBidderFactory)->RelaySubmitSinkFactory
@@ -290,12 +292,15 @@ impl FlashbotsConfig {
         Arc<dyn BiddingServiceWinControl>,
     )> {
         let block_processor_key = if let Some(key_registration_url) = &self.key_registration_url {
+            if self.blocks_processor_url.is_none() {
+                return Self::bail_blocks_processor_url_not_set();
+            }
             Some(self.register_key(key_registration_url).await?)
         } else {
             None
         };
         // RelaySubmitSinkFactory
-        let bid_observer = self.create_block_processor_client(block_processor_key)?;
+        let bid_observer = self.create_block_processor_client(block_processor_key.clone())?;
         let (sink_sealed_factory, relays) = self
             .l1_config
             .create_relays_sealed_sink_factory(self.base_config.chain_spec()?, bid_observer)?;
@@ -321,32 +326,56 @@ impl FlashbotsConfig {
         ));
 
         // UnfinishedBlockBuildingSinkFactoryWrapper
-        let wrapped_sink_factory =
-            self.wrap_with_tbv_redis_pusher(&cancellation_token, &bid_value_source, sink_factory)?;
+        let wrapped_sink_factory = self.wrap_with_tbv_pusher(
+            &cancellation_token,
+            &bid_value_source,
+            block_processor_key,
+            sink_factory,
+        )?;
 
         Ok((wrapped_sink_factory, relays, bidding_service_win_control))
     }
 
-    fn wrap_with_tbv_redis_pusher(
+    /// Wraps the factory with one that sends a to TBV stream to our infra.
+    /// block_processor_key == Some -> We use signed block processor API.
+    /// block_processor_key == None -> If Some(tbv_push_redis) -> We send directly to a redis channel.
+    fn wrap_with_tbv_pusher(
         &self,
         cancellation_token: &CancellationToken,
         bid_value_source: &Arc<dyn BidValueSource + Send + Sync>,
+        block_processor_key: Option<PrivateKeySigner>,
         factory: Box<dyn UnfinishedBlockBuildingSinkFactory>,
     ) -> eyre::Result<Box<dyn UnfinishedBlockBuildingSinkFactory>> {
-        if let Some(cfg) = &self.tbv_push_redis {
+        if let Some(block_processor_key) = block_processor_key {
+            if let Some(blocks_processor_url) = &self.blocks_processor_url {
+                Ok(Box::new(
+                    UnfinishedBlockBuildingSinkFactoryWrapper::new_block_processor(
+                        factory,
+                        bid_value_source.clone(),
+                        blocks_processor_url.clone(),
+                        block_processor_key,
+                        cancellation_token.clone(),
+                    )?,
+                ))
+            } else {
+                Self::bail_blocks_processor_url_not_set()
+            }
+        } else if let Some(cfg) = &self.tbv_push_redis {
             let tbv_push_redis_url_value = cfg
                 .url
                 .as_ref()
                 .ok_or(eyre::Report::msg("Missing tbv_push_redis_url"))?
                 .value()
                 .context("tbv_push_redis_url")?;
-            Ok(Box::new(UnfinishedBlockBuildingSinkFactoryWrapper::new(
-                factory,
-                bid_value_source.clone(),
-                tbv_push_redis_url_value,
-                cfg.channel.clone(),
-                cancellation_token.clone(),
-            )?))
+            Ok(Box::new(
+                UnfinishedBlockBuildingSinkFactoryWrapper::new_redis(
+                    factory,
+                    bid_value_source.clone(),
+                    tbv_push_redis_url_value,
+                    cfg.channel.clone(),
+                    cancellation_token.clone(),
+                )?,
+            ))
         } else {
             Ok(factory)
         }

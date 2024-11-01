@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use alloy_signer_local::PrivateKeySigner;
 use rbuilder::{
     building::builders::{UnfinishedBlockBuildingSink, UnfinishedBlockBuildingSinkFactory},
     live_builder::{
@@ -11,7 +12,8 @@ use redis::RedisError;
 use tokio_util::sync::CancellationToken;
 
 use super::{
-    best_true_value_pusher::{BestTrueValueCell, BestTrueValuePusher},
+    best_true_value_pusher::{Backend, BestTrueValueCell, BestTrueValuePusher},
+    blocks_processor_backend::{self, BlocksProcessorBackend},
     redis_backend::RedisBackend,
     unfinished_block_building_sink_wrapper::UnfinishedBlockBuildingSinkWrapper,
 };
@@ -27,28 +29,59 @@ pub struct UnfinishedBlockBuildingSinkFactoryWrapper {
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Unable to init redis connection : {0}")]
-    RedisError(#[from] RedisError),
+    Redis(#[from] RedisError),
+    #[error("BlocksProcessor backend error: {0}")]
+    BlocksProcessor(#[from] blocks_processor_backend::Error),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 impl UnfinishedBlockBuildingSinkFactoryWrapper {
-    // Constructor for UnfinishedBlockBuildingSinkFactoryWrapper
-    pub fn new(
+    /// Constructor using a redis channel backend
+    pub fn new_redis(
         factory: Box<dyn UnfinishedBlockBuildingSinkFactory>,
         competition_bid_value_source: Arc<dyn BidValueSource + Send + Sync>,
         tbv_push_redis_url: String,
         tbv_push_redis_channel: String,
         cancellation_token: CancellationToken,
     ) -> Result<Self> {
-        let best_local_value = BestTrueValueCell::default();
         let best_true_value_redis = redis::Client::open(tbv_push_redis_url)?;
-
         let redis_backend = RedisBackend::new(best_true_value_redis, tbv_push_redis_channel);
-        let redis_sync =
-            BestTrueValuePusher::new(best_local_value.clone(), redis_backend, cancellation_token);
-        std::thread::spawn(move || redis_sync.run_push_task());
+        Self::new(
+            factory,
+            competition_bid_value_source,
+            redis_backend,
+            cancellation_token,
+        )
+    }
 
+    /// Constructor using signed JSON-RPC block-processor API
+    pub fn new_block_processor(
+        factory: Box<dyn UnfinishedBlockBuildingSinkFactory>,
+        competition_bid_value_source: Arc<dyn BidValueSource + Send + Sync>,
+        url: String,
+        signer: PrivateKeySigner,
+        cancellation_token: CancellationToken,
+    ) -> Result<Self> {
+        let backend = BlocksProcessorBackend::new(url, signer)?;
+        Self::new(
+            factory,
+            competition_bid_value_source,
+            backend,
+            cancellation_token,
+        )
+    }
+
+    fn new<BackendType: Backend + Send + 'static>(
+        factory: Box<dyn UnfinishedBlockBuildingSinkFactory>,
+        competition_bid_value_source: Arc<dyn BidValueSource + Send + Sync>,
+        backend: BackendType,
+        cancellation_token: CancellationToken,
+    ) -> Result<Self> {
+        let best_local_value = BestTrueValueCell::default();
+        let pusher =
+            BestTrueValuePusher::new(best_local_value.clone(), backend, cancellation_token);
+        std::thread::spawn(move || pusher.run_push_task());
         Ok(UnfinishedBlockBuildingSinkFactoryWrapper {
             factory,
             competition_bid_value_source,
