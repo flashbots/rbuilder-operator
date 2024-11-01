@@ -77,19 +77,19 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      # https://github.com/dtolnay/rust-toolchain
-      - name: Setup rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          target: ${{ matrix.configs.target }}
+      # # https://github.com/dtolnay/rust-toolchain
+      # - name: Setup rust toolchain
+      #   uses: dtolnay/rust-toolchain@stable
+      #   with:
+      #     target: ${{ matrix.configs.target }}
 
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
+      # - name: Install Protoc
+      #   uses: arduino/setup-protoc@v3
 
-      - name: Install musl-tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools
+      # - name: Install musl-tools
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y musl-tools
 
       # # https://github.com/WarpBuilds/rust-cache
       # - name: Run WarpBuilds/rust-cache
@@ -101,7 +101,7 @@ jobs:
       # - name: Setup sccache-action
       #   uses: mozilla-actions/sccache-action@v0.0.5
 
-      # - name: Set env vars
+      # - name: Configure sccache
       #   run: |
       #     echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
       #     echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
@@ -112,14 +112,22 @@ jobs:
           echo "OUTPUT_FILENAME=$OUTPUT_FILENAME" >> $GITHUB_ENV
           echo "Filename: ${OUTPUT_FILENAME}"
 
-      - name: Build rbuilder binary
+      # - name: Build rbuilder binary
+      #   run: |
+      #     # rustup show
+      #     # rustup component add rust-src  # needed for stdlib source
+      #     # rustc --version
+      #     # cargo --version
+      #     # RUSTFLAGS="-C target-feature=+crt-static" cargo build --target ${{ matrix.configs.target }} --release -Z build-std --verbose
+      #     cargo build --release --target x86_64-unknown-linux-musl --verbose
+
+      - name: Build binary
         run: |
-          # rustup show
-          # rustup component add rust-src  # needed for stdlib source
-          # rustc --version
-          # cargo --version
-          # RUSTFLAGS="-C target-feature=+crt-static" cargo build --target ${{ matrix.configs.target }} --release -Z build-std --verbose
-          cargo build --release --target x86_64-unknown-linux-musl --verbose
+          docker run --rm -t \
+            -v $HOME/.cargo/registry/:/root/.cargo/registry \
+            -v "$(pwd)":/volume \
+            clux/muslrust:stable \
+            cargo build --release --target ${{ matrix.configs.target }} --verbose
 
       - name: Prepare artifacts
         run: |
