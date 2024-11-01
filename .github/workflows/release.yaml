@@ -112,8 +112,7 @@ jobs:
           echo "OUTPUT_FILENAME=$OUTPUT_FILENAME" >> $GITHUB_ENV
           echo "Filename: ${OUTPUT_FILENAME}"
 
-      - name: Install cross
-        run: cargo install cross
+      - uses: taiki-e/install-action@cross
 
       - name: Build binary
         run: cross build --release --target ${{ matrix.configs.target }}
