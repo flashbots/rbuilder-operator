@@ -124,7 +124,7 @@ jobs:
         uses: actions/upload-artifact@v4.3.1
         with:
           name: ${{ env.OUTPUT_FILENAME }}
-          path: artifacts/${{ matrix.configs.target }}/${{ env.OUTPUT_FILENAME }}
+          path: artifacts/${{ env.OUTPUT_FILENAME }}
 
   #
   # draft-release runs after building for various targets, collects artifacts and prepares a draft release
