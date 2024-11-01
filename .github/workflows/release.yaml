@@ -77,18 +77,18 @@ jobs:
 
       # https://github.com/dtolnay/rust-toolchain
       - name: Setup rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
         with:
           target: ${{ matrix.configs.target }}
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
 
-      # https://github.com/WarpBuilds/rust-cache
-      - name: Run WarpBuilds/rust-cache
-        uses: WarpBuilds/rust-cache@v2
-        with:
-          cache-on-failure: true
+      # # https://github.com/WarpBuilds/rust-cache
+      # - name: Run WarpBuilds/rust-cache
+      #   uses: WarpBuilds/rust-cache@v2
+      #   with:
+      #     cache-on-failure: true
 
       # # https://github.com/Mozilla-Actions/sccache-action
       # - name: Setup sccache-action
@@ -108,9 +108,11 @@ jobs:
       - name: Build rbuilder binary
         run: |
           rustup show
+          rustup component add rust-src  # needed for stdlib source
           rustc --version
           cargo --version
-          RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --verbose
+          # RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --verbose
+          RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --verbose -Z build-std
 
       - name: Prepare artifacts
         run: |
