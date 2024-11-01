@@ -112,7 +112,7 @@ jobs:
           rustc --version
           cargo --version
           # RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --verbose
-          RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --verbose -Z build-std
+          RUSTFLAGS="-C target-feature=+crt-static" cargo build --target x86_64-unknown-linux-gnu --release -Z build-std --verbose
 
       - name: Prepare artifacts
         run: |
