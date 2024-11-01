@@ -112,19 +112,19 @@ jobs:
           rustc --version
           cargo --version
           # RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --verbose
-          RUSTFLAGS="-C target-feature=+crt-static" cargo build --target x86_64-unknown-linux-gnu --release -Z build-std --verbose
+          RUSTFLAGS="-C target-feature=+crt-static" cargo build --target ${{ matrix.configs.target }} --release -Z build-std --verbose
 
       - name: Prepare artifacts
         run: |
           mkdir -p artifacts
-          tar -czf "artifacts/${OUTPUT_FILENAME}" -C target/release rbuilder
+          tar -czf "artifacts/${OUTPUT_FILENAME}" -C target/${{ matrix.configs.target }}/release rbuilder
 
       # https://github.com/actions/upload-artifact
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.1
         with:
           name: ${{ env.OUTPUT_FILENAME }}
-          path: artifacts/${{ env.OUTPUT_FILENAME }}
+          path: artifacts/${{ matrix.configs.target }}/${{ env.OUTPUT_FILENAME }}
 
   #
   # draft-release runs after building for various targets, collects artifacts and prepares a draft release
