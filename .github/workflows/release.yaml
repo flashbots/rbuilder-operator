@@ -132,16 +132,22 @@ jobs:
           #          cargo build --release --target ${{ matrix.configs.target }} --verbose'
           docker run --rm \
             --volume ${{ github.workspace }}:/volume \
-            # --volume ~/.cargo/registry:/root/.cargo/registry \
-            # --volume ~/.cargo/git:/root/.cargo/git \
-            # --volume ~/.cargo/bin:/root/.cargo/bin \
-            # --env SCCACHE_GHA_ENABLED=true \
-            # --env RUSTC_WRAPPER=/usr/local/bin/sccache \
-            # --env SCCACHE_DIR=/volume/target/sccache \
             clux/muslrust:stable \
             sh -c  'apt-get update \
                     && apt-get install -y clang libclang-dev \
                     && cargo build --release --target ${{ matrix.configs.target }}'
+          # docker run --rm \
+          #   --volume ${{ github.workspace }}:/volume \
+          #   --volume ~/.cargo/registry:/root/.cargo/registry \
+          #   --volume ~/.cargo/git:/root/.cargo/git \
+          #   --volume ~/.cargo/bin:/root/.cargo/bin \
+          #   --env SCCACHE_GHA_ENABLED=true \
+          #   --env RUSTC_WRAPPER=/usr/local/bin/sccache \
+          #   --env SCCACHE_DIR=/volume/target/sccache \
+          #   clux/muslrust:stable \
+          #   sh -c  'apt-get update \
+          #           && apt-get install -y clang libclang-dev \
+          #           && cargo build --release --target ${{ matrix.configs.target }}'
           # docker run --rm \
           #   --volume $(pwd):/volume \
           #   -e CC=x86_64-linux-musl-gcc \
