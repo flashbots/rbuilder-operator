@@ -68,8 +68,8 @@ jobs:
         configs:
           - target: x86_64-unknown-linux-gnu
             runner: warp-ubuntu-2404-x64-16x
-          - target: aarch64-apple-darwin
-            runner: warp-macos-14-arm64-6x
+          # - target: aarch64-apple-darwin
+          #   runner: warp-macos-14-arm64-6x
 
     steps:
       - name: Checkout sources
