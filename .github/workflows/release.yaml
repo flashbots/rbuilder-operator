@@ -71,11 +71,9 @@ jobs:
         with:
           cache-on-failure: true
           workspaces: |
-            .
             target
-            ~/.cargo/git
-            ~/.cargo/registry
-            ~/.cross/
+            /home/runner/.cargo
+            /home/runner/.cross
 
       - name: Prepare output filename
         run: |
