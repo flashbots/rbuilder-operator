@@ -70,10 +70,6 @@ jobs:
         uses: WarpBuilds/rust-cache@v2
         with:
           cache-on-failure: true
-          workspaces: |
-            target
-            /home/runner/.cargo
-            /home/runner/.cross
 
       - name: Prepare output filename
         run: |
