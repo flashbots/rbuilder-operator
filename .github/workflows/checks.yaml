@@ -13,18 +13,16 @@ env:
 jobs:
   lint_and_test:
     name: Lint and test
-    runs-on: warp-ubuntu-2204-x64-16x
+    runs-on: warp-ubuntu-latest-x64-16x
     strategy:
       matrix:
         toolchain:
           - stable
-          #- beta
-          #- nightly
+
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      # https://github.com/dtolnay/rust-toolchain
       - name: Setup rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -33,13 +31,11 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
 
-      # https://github.com/WarpBuilds/rust-cache
       - name: Run WarpBuilds/rust-cache
         uses: WarpBuilds/rust-cache@v2
         with:
           cache-on-failure: true
 
-      # https://github.com/Mozilla-Actions/sccache-action
       - name: Run sccache-action
         uses: mozilla-actions/sccache-action@v0.0.5
 
@@ -51,8 +47,5 @@ jobs:
       - name: Install native dependencies
         run: sudo apt-get install -y libsqlite3-dev
 
-      #######################################################
-
-      # lint and test
       - run: make lint
       - run: make test
