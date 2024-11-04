@@ -22,6 +22,7 @@ dry_run = true
 dry_run_validation_url = "http://localhost:8545"
 
 blocks_processor_url = "http://block_processor.internal"
+key_registration_url = "http://127.0.0.1:8090"
 ignore_cancellable_orders = true
 
 sbundle_mergeabe_signers = []
