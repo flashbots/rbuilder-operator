@@ -6,7 +6,6 @@ use rbuilder::utils::{
     reconnect::{run_loop_with_reconnect, RunCommand},
     u256decimal_serde_helper,
 };
-use redis::Commands;
 use serde::{Deserialize, Serialize};
 use std::{
     sync::{Arc, Mutex},
@@ -92,30 +91,41 @@ impl BestTrueValueCell {
 /// BestTrueValueRedisSync keeps best true value for the current block synced with other builders
 /// using redis.
 #[derive(Debug, Clone)]
-pub struct BestTrueValueRedisSync {
+pub struct BestTrueValuePusher<BackendType> {
     /// Best value we got from our building algorithms.
     best_local_value: BestTrueValueCell,
-
-    redis: redis::Client,
-    channel_name: String,
+    backend: BackendType,
 
     cancellation_token: CancellationToken,
 }
 
-const REDIS_PUSH_INTERVAL: Duration = Duration::from_millis(50);
+const PUSH_INTERVAL: Duration = Duration::from_millis(50);
 const MAX_IO_ERRORS: usize = 5;
 
-impl BestTrueValueRedisSync {
+/// Trait to connect and publish new tbv data (as a &str)
+/// For simplification mixes a little the factory role and the publish role.
+pub trait Backend {
+    type Connection;
+    type BackendError: std::error::Error;
+    /// Creates a new connection to the sink of tbv info.
+    fn connect(&self) -> Result<Self::Connection, Self::BackendError>;
+    /// Call with the connection obtained by connect()
+    fn publish(
+        &self,
+        connection: &mut Self::Connection,
+        best_true_value: &BestTrueValue,
+    ) -> Result<(), Self::BackendError>;
+}
+
+impl<BackendType: Backend> BestTrueValuePusher<BackendType> {
     pub fn new(
         best_local_value: BestTrueValueCell,
-        redis: redis::Client,
-        channel_name: String,
+        backend: BackendType,
         cancellation_token: CancellationToken,
     ) -> Self {
         Self {
             best_local_value,
-            redis,
-            channel_name,
+            backend,
             cancellation_token,
         }
     }
@@ -124,8 +134,10 @@ impl BestTrueValueRedisSync {
     /// The value is read from best_local_value and pushed to redis.
     pub fn run_push_task(self) {
         run_loop_with_reconnect(
-            "redis_push_best_bid",
-            || -> redis::RedisResult<redis::Connection> { self.redis.get_connection() },
+            "push_best_bid",
+            || -> Result<BackendType::Connection, BackendType::BackendError> {
+                self.backend.connect()
+            },
             |mut conn| -> RunCommand {
                 let mut io_errors = 0;
                 let mut last_pushed_value: Option<BestTrueValue> = None;
@@ -138,27 +150,16 @@ impl BestTrueValueRedisSync {
                         return RunCommand::Reconnect;
                     }
 
-                    sleep(REDIS_PUSH_INTERVAL);
+                    sleep(PUSH_INTERVAL);
                     let best_local_value = self.best_local_value.read();
                     if last_pushed_value
                         .as_ref()
                         .map_or(true, |value| !value.is_same_bid_info(&best_local_value))
                     {
                         last_pushed_value = Some(best_local_value.clone());
-                        let value = match serde_json::to_string(&best_local_value) {
-                            Ok(value) => value,
-                            Err(err) => {
-                                error!(
-                                    ?err,
-                                    ?best_local_value,
-                                    "Failed to serialize best true value bid"
-                                );
-                                continue;
-                            }
-                        };
-                        match conn.publish(&self.channel_name, &value) {
+                        match self.backend.publish(&mut conn, &best_local_value) {
                             Ok(()) => {
-                                trace!(?best_local_value, "Pushed best local value to redis");
+                                trace!(?best_local_value, "Pushed best local value");
                             }
                             Err(err) => {
                                 error!(?err, "Failed to publish best true value bid");

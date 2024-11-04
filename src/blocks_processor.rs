@@ -198,7 +198,6 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
         Ok(())
     }
 
-    /// T is parametric just because it too BIG to type
     fn handle_rpc_error(err: &jsonrpsee::core::Error, request: &ConsumeBuiltBlockRequest) {
         match err {
             jsonrpsee::core::Error::Call(error_object) => {
