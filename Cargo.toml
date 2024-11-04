@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+openssl = { version = "0.10", features = ["vendored"], optional = false }
 clap = { version = "4.4.3", features = ["derive", "env"] }
 tokio = "1.32.0"
 tokio-util = "0.7.10"
@@ -46,7 +47,6 @@ tower = "0.4"
 
 metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "d96e7215483bac0ab145459f4ddaa811d99459d6"}
 
-#rbuilder = {path="./../rbuilder/crates/rbuilder"}
 rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "d96e7215483bac0ab145459f4ddaa811d99459d6"}
 
 [build-dependencies]
