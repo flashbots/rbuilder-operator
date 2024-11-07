@@ -51,6 +51,8 @@ jobs:
     needs: extract-version
     if: ${{ github.event.inputs.build-binary == 'true' || github.event_name == 'push'}} # when manually triggered or version tagged
     runs-on: ${{ matrix.configs.runner }}
+    container:
+      image: ubuntu:22.04
     env:
       VERSION: ${{ needs.extract-version.outputs.VERSION }}
     permissions:
@@ -59,39 +61,36 @@ jobs:
     strategy:
       matrix:
         configs:
-          - target: x86_64-unknown-linux-musl
+          - target: x86_64-unknown-linux-gnu
             runner: warp-ubuntu-latest-x64-16x
 
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Run WarpBuilds/rust-cache
-        uses: WarpBuilds/rust-cache@v2
-        with:
-          cache-on-failure: true
+      - uses: WarpBuilds/rust-cache@v2
 
-      - name: Prepare output filename
-        run: |
-          OUTPUT_FILENAME="rbuilder-${VERSION}-${{ matrix.configs.target }}.tar.gz"
-          echo "OUTPUT_FILENAME=$OUTPUT_FILENAME" >> $GITHUB_ENV
-          echo "Filename: ${OUTPUT_FILENAME}"
-
-      - uses: taiki-e/install-action@cross
+      - name: Prepare filename
+        run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}" >> $GITHUB_ENV
 
       - name: Build binary
-        run: cross build --release --target ${{ matrix.configs.target }}
-
-      - name: Prepare artifacts
         run: |
-          mkdir -p artifacts
-          tar -czf "artifacts/${OUTPUT_FILENAME}" -C target/${{ matrix.configs.target }}/release rbuilder
+          apt-get update
+          apt-get install -y \
+            build-essential \
+            curl \
+            libclang-dev \
+            libssl-dev \
+            pkg-config \
+            protobuf-compiler
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          . $HOME/.cargo/env
+          cargo build --release --target ${{ matrix.configs.target }}
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4.3.1
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.OUTPUT_FILENAME }}
-          path: artifacts/${{ env.OUTPUT_FILENAME }}
+          path: target/${{ matrix.configs.target }}/release/rbuilder
 
   draft-release:
     name: Draft release
