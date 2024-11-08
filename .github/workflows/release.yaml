@@ -78,7 +78,6 @@ jobs:
             libssl-dev \
             pkg-config \
             protobuf-compiler
-          git config --global --add safe.directory .
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           . $HOME/.cargo/env
 
@@ -86,6 +85,7 @@ jobs:
 
       - name: debug git
         run: |
+          git config --global --add safe.directory .
           echo "Workspace: ${{ github.workspace }}"
           echo "Current directory:"
           pwd
