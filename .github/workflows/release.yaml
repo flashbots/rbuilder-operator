@@ -85,7 +85,7 @@ jobs:
 
       - name: debug git
         run: |
-          git config --global --add safe.directory .
+          git config --global --add safe.directory "$(pwd)"
           echo "Workspace: ${{ github.workspace }}"
           echo "Current directory:"
           pwd
