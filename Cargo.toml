@@ -53,9 +53,9 @@ http = "0.2.9"
 hyper = "0.14"
 futures-util = "0.3"
 
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "d96e7215483bac0ab145459f4ddaa811d99459d6"}
+metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "5d152e8edc3c2027263c40b7661323a468a5f01b"}
 
-rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "d96e7215483bac0ab145459f4ddaa811d99459d6"}
+rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "5d152e8edc3c2027263c40b7661323a468a5f01b"}
 
 [build-dependencies]
 built = { version = "0.7.1", features = ["git2", "chrono"] }

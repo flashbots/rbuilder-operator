@@ -5,7 +5,7 @@ use alloy_signer_local::PrivateKeySigner;
 use eyre::Context;
 use http::StatusCode;
 use jsonrpsee::RpcModule;
-use rbuilder::building::builders::merging_builder::merging_build_backtest;
+use rbuilder::building::builders::parallel_builder::parallel_build_backtest;
 use rbuilder::building::builders::UnfinishedBlockBuildingSinkFactory;
 use rbuilder::live_builder::base_config::EnvOrValue;
 use rbuilder::live_builder::block_output::bid_observer::{BidObserver, NullBidObserver};
@@ -30,8 +30,8 @@ use rbuilder::{
     utils::build_info::Version,
 };
 use reth::payload::database::CachedReads;
-use reth::providers::ProviderFactory;
-use reth_db::DatabaseEnv;
+use reth::providers::{DatabaseProviderFactory, HeaderProvider, StateProviderFactory};
+use reth_db::Database;
 use serde::Deserialize;
 use serde_with::serde_as;
 use tokio_util::sync::CancellationToken;
@@ -118,17 +118,17 @@ impl LiveBuilderConfig for FlashbotsConfig {
         &self.base_config
     }
 
-    async fn create_builder(
+    async fn new_builder<P, DB>(
         &self,
+        provider: P,
         cancellation_token: CancellationToken,
-    ) -> eyre::Result<LiveBuilder<Arc<DatabaseEnv>, MevBoostSlotDataGenerator>> {
-        let provider_factory = self.base_config.provider_factory()?;
-
+    ) -> eyre::Result<LiveBuilder<P, DB, MevBoostSlotDataGenerator>>
+    where
+        DB: Database + Clone + 'static,
+        P: DatabaseProviderFactory<DB> + StateProviderFactory + HeaderProvider + Clone + 'static,
+    {
         let (sink_factory, relays, bidding_service_win_control) = self
-            .create_sink_factory_and_relays(
-                provider_factory.provider_factory_unchecked(),
-                cancellation_token.clone(),
-            )
+            .create_sink_factory_and_relays(provider.clone(), cancellation_token.clone())
             .await?;
 
         let payload_event = MevBoostSlotDataGenerator::new(
@@ -144,7 +144,7 @@ impl LiveBuilderConfig for FlashbotsConfig {
                 cancellation_token.clone(),
                 sink_factory,
                 payload_event,
-                provider_factory,
+                provider,
             )
             .await?;
 
@@ -170,11 +170,15 @@ impl LiveBuilderConfig for FlashbotsConfig {
     }
 
     /// @Pending fix this ugly copy/paste
-    fn build_backtest_block(
+    fn build_backtest_block<P, DB>(
         &self,
         building_algorithm_name: &str,
-        input: BacktestSimulateBlockInput<'_, Arc<DatabaseEnv>>,
-    ) -> eyre::Result<(Block, CachedReads)> {
+        input: BacktestSimulateBlockInput<'_, P>,
+    ) -> eyre::Result<(Block, CachedReads)>
+    where
+        DB: Database + Clone + 'static,
+        P: DatabaseProviderFactory<DB> + StateProviderFactory + Clone + 'static,
+    {
         let builder_cfg = self.builder(building_algorithm_name)?;
         match builder_cfg.builder {
             SpecificBuilderConfig::OrderingBuilder(config) => {
@@ -182,7 +186,9 @@ impl LiveBuilderConfig for FlashbotsConfig {
                     config, input,
                 )
             }
-            SpecificBuilderConfig::MergingBuilder(config) => merging_build_backtest(input, config),
+            SpecificBuilderConfig::ParallelBuilder(config) => {
+                parallel_build_backtest(input, config)
+            }
         }
     }
 }
@@ -282,15 +288,19 @@ impl FlashbotsConfig {
     /// BlockSealingBidderFactory: performs sealing/bidding. Sends bids to the RelaySubmitSinkFactory
     /// UnfinishedBlockBuildingSinkFactoryWrapper: sends all the tbv info via redis and forwards to BlockSealingBidderFactory
     #[allow(clippy::type_complexity)]
-    async fn create_sink_factory_and_relays(
+    async fn create_sink_factory_and_relays<P, DB>(
         &self,
-        provider_factory: ProviderFactory<Arc<DatabaseEnv>>,
+        provider: P,
         cancellation_token: CancellationToken,
     ) -> eyre::Result<(
         Box<dyn UnfinishedBlockBuildingSinkFactory>,
         Vec<MevBoostRelay>,
         Arc<dyn BiddingServiceWinControl>,
-    )> {
+    )>
+    where
+        DB: Database + Clone + 'static,
+        P: DatabaseProviderFactory<DB> + StateProviderFactory + HeaderProvider + Clone + 'static,
+    {
         let block_processor_key = if let Some(key_registration_url) = &self.key_registration_url {
             if self.blocks_processor_url.is_none() {
                 return Self::bail_blocks_processor_url_not_set();
@@ -307,7 +317,7 @@ impl FlashbotsConfig {
 
         // BlockSealingBidderFactory
         let (wallet_balance_watcher, wallet_history) = WalletBalanceWatcher::new(
-            provider_factory,
+            provider,
             self.base_config.coinbase_signer()?.address,
             WALLET_INIT_HISTORY_SIZE,
         )?;
