@@ -79,34 +79,16 @@ jobs:
             pkg-config \
             protobuf-compiler
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          . $HOME/.cargo/env
 
-      - uses: actions/checkout@v4
-
-      - name: debug git
-        run: |
-          git config --global --add safe.directory "$(pwd)"
-          echo "Workspace: ${{ github.workspace }}"
-          echo "Current directory:"
-          pwd
-          echo "Directory contents:"
-          ls -lah
-          echo "\n.git directory contents:"
-          ls -lah .git || echo ".git not found"
-          echo "Git version:"
-          git --version
-          echo "Git status:"
-          git status
-          echo "Git branch:"
-          git branch
-          echo "Git rev-parse:"
-          git rev-parse --git-dir
+      - uses: actions/checkout@v4 # must install git before checkout and set safe.directory after checkout because of container
 
       - name: Prepare filename
         run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}" >> $GITHUB_ENV
 
       - name: Build binary
         run: |
+          git config --global --add safe.directory "$(pwd)"
+          . $HOME/.cargo/env
           cargo build --release --target ${{ matrix.configs.target }}
 
       - name: Upload artifact
