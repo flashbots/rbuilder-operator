@@ -93,13 +93,17 @@ jobs:
           echo "Workspace: ${{ github.workspace }}"
           echo "Current directory:"
           pwd
+          echo "Directory contents:"
+          ls -lah
+          echo "\n.git directory contents:"
+          ls -lah .git || echo ".git not found"
           echo "Git status:"
           git status
           echo "Git branch:"
           git branch
           echo "Git rev-parse:"
           git rev-parse --git-dir
-          git config --global --add safe.directory ${{ github.workspace }}
+          git config --global --add safe.directory .
 
       - name: Build binary
         run: |
