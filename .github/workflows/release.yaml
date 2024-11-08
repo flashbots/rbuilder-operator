@@ -78,6 +78,7 @@ jobs:
             libssl-dev \
             pkg-config \
             protobuf-compiler
+          git config --global --add safe.directory .
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           . $HOME/.cargo/env
 
@@ -100,7 +101,6 @@ jobs:
           git branch
           echo "Git rev-parse:"
           git rev-parse --git-dir
-          # git config --global --add safe.directory .
 
       - name: Prepare filename
         run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}" >> $GITHUB_ENV
