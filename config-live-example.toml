@@ -26,7 +26,7 @@ key_registration_url = "http://127.0.0.1:8090"
 ignore_cancellable_orders = true
 
 sbundle_mergeabe_signers = []
-live_builders = ["mp-ordering", "mgp-ordering", "merging"]
+live_builders = ["mp-ordering", "mgp-ordering", "parallel"]
 
 top_bid_ws_url = "env:TOP_BID_WS_URL"
 top_bid_ws_basic_auth = "env:TOP_BID_WS_BASIC_AUTH"
@@ -63,8 +63,7 @@ failed_order_retries = 1
 drop_failed_orders = true
 
 [[builders]]
-name = "merging"
-algo = "merging-builder"
+name = "parallel"
+algo = "parallel-builder"
 discard_txs = true
 num_threads = 5
-merge_wait_time_ms = 100
