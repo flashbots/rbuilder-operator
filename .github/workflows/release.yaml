@@ -74,7 +74,7 @@ jobs:
       - name: Prepare filename
         run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}" >> $GITHUB_ENV
 
-      - name: Build binary
+      - name: Install dependencies
         run: |
           apt-get update
           apt-get install -y \
@@ -87,6 +87,22 @@ jobs:
             protobuf-compiler
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           . $HOME/.cargo/env
+
+      - name: debug git
+        run: |
+          echo "Workspace: ${{ github.workspace }}"
+          echo "Current directory:"
+          pwd
+          echo "Git status:"
+          git status
+          echo "Git branch:"
+          git branch
+          echo "Git rev-parse:"
+          git rev-parse --git-dir
+          git config --global --add safe.directory ${{ github.workspace }}
+
+      - name: Build binary
+        run: |
           cargo build --release --target ${{ matrix.configs.target }}
 
       - name: Upload artifact
