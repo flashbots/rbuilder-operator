@@ -5209,7 +5209,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=d96e7215483bac0ab145459f4ddaa811d99459d6#d96e7215483bac0ab145459f4ddaa811d99459d6"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=74b214fecf9df90d4510ce09f68afbbcdb535c4c#74b214fecf9df90d4510ce09f68afbbcdb535c4c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7095,7 +7095,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=d96e7215483bac0ab145459f4ddaa811d99459d6#d96e7215483bac0ab145459f4ddaa811d99459d6"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=74b214fecf9df90d4510ce09f68afbbcdb535c4c#74b214fecf9df90d4510ce09f68afbbcdb535c4c"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -11426,7 +11426,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=d96e7215483bac0ab145459f4ddaa811d99459d6#d96e7215483bac0ab145459f4ddaa811d99459d6"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=74b214fecf9df90d4510ce09f68afbbcdb535c4c#74b214fecf9df90d4510ce09f68afbbcdb535c4c"
 dependencies = [
  "proc-macro2",
  "quote",
