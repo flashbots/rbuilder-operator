@@ -23,7 +23,7 @@ clean: ## Clean up
 
 .PHONY: build
 build: ## Build static binary for x86_64
-	cross build --release --target x86_64-unknown-linux-musl
+	cargo build --release --target x86_64-unknown-linux-gnu
 
 .PHONY: docker-image
 docker-image: ## Build a rbuilder Docker image

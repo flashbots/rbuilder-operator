@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-openssl = { version = "0.10", features = ["vendored"], optional = false }
 clap = { version = "4.4.3", features = ["derive", "env"] }
 tokio = "1.32.0"
 tokio-util = "0.7.10"
