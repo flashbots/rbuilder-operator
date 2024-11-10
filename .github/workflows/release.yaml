@@ -65,24 +65,29 @@ jobs:
             runner: warp-ubuntu-latest-x64-16x
 
     steps:
-      - uses: actions/checkout@v4
-
       - uses: WarpBuilds/rust-cache@v2
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            build-essential \
+            curl \
+            git \
+            libclang-dev \
+            libssl-dev \
+            pkg-config \
+            protobuf-compiler
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+      - uses: actions/checkout@v4 # must install git before checkout and set safe.directory after checkout because of container
 
       - name: Prepare filename
         run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}" >> $GITHUB_ENV
 
       - name: Build binary
         run: |
-          apt-get update
-          apt-get install -y \
-            build-essential \
-            curl \
-            libclang-dev \
-            libssl-dev \
-            pkg-config \
-            protobuf-compiler
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          git config --global --add safe.directory "$(pwd)"
           . $HOME/.cargo/env
           cargo build --release --target ${{ matrix.configs.target }}
 
