@@ -65,7 +65,7 @@ jobs:
             runner: warp-ubuntu-latest-x64-16x
 
     steps:
-      - uses: WarpBuilds/rust-cache@v2
+      # - uses: WarpBuilds/rust-cache@v2
 
       - name: Install dependencies
         run: |
