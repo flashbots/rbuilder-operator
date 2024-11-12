@@ -5,8 +5,8 @@ mod internal {
 }
 
 use internal::{
-    BUILT_TIME_UTC, FEATURES, GIT_COMMIT_HASH_SHORT, GIT_HEAD_REF, PROFILE, RUSTC_VERSION,
-    CI_PLATFORM,
+    BUILT_TIME_UTC, CI_PLATFORM, FEATURES, GIT_COMMIT_HASH_SHORT, GIT_HEAD_REF, PROFILE,
+    RUSTC_VERSION,
 };
 use rbuilder::utils::build_info::Version;
 
