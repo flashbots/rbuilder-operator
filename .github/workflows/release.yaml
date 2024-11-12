@@ -85,17 +85,24 @@ jobs:
       - name: Prepare filename
         run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}" >> $GITHUB_ENV
 
-      - name: Build binary
+      - name: Debug dirty
         run: |
           git config --global --add safe.directory "$(pwd)"
-          . $HOME/.cargo/env
-          cargo build --release --target ${{ matrix.configs.target }}
+          echo status && git status --porcelain
+          echo diff && git diff --cached --name-status
+          echo ls-files && git ls-files --others --exclude-standard
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.OUTPUT_FILENAME }}
-          path: target/${{ matrix.configs.target }}/release/rbuilder
+      # - name: Build binary
+      #   run: |
+      #     git config --global --add safe.directory "$(pwd)"
+      #     . $HOME/.cargo/env
+      #     cargo build --release --target ${{ matrix.configs.target }}
+
+      # - name: Upload artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ${{ env.OUTPUT_FILENAME }}
+      #     path: target/${{ matrix.configs.target }}/release/rbuilder
 
   draft-release:
     name: Draft release
