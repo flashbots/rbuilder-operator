@@ -65,7 +65,7 @@ jobs:
             runner: warp-ubuntu-latest-x64-16x
 
     steps:
-      # - uses: WarpBuilds/rust-cache@v2
+      - uses: WarpBuilds/rust-cache@v2
 
       - name: Install dependencies
         run: |
@@ -92,17 +92,17 @@ jobs:
           echo diff && git diff --cached --name-status
           echo ls-files && git ls-files --others --exclude-standard
 
-      # - name: Build binary
-      #   run: |
-      #     git config --global --add safe.directory "$(pwd)"
-      #     . $HOME/.cargo/env
-      #     cargo build --release --target ${{ matrix.configs.target }}
+      - name: Build binary
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          . $HOME/.cargo/env
+          cargo build --release --target ${{ matrix.configs.target }}
 
-      # - name: Upload artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ env.OUTPUT_FILENAME }}
-      #     path: target/${{ matrix.configs.target }}/release/rbuilder
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OUTPUT_FILENAME }}
+          path: target/${{ matrix.configs.target }}/release/rbuilder
 
   draft-release:
     name: Draft release
