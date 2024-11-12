@@ -97,6 +97,7 @@ jobs:
           git config --global --add safe.directory "$(pwd)"
           . $HOME/.cargo/env
           cargo build --release --target ${{ matrix.configs.target }}
+          ./target/${{ matrix.configs.target }}/release/rbuilder version
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -5,8 +5,8 @@ mod internal {
 }
 
 use internal::{
-    BUILT_TIME_UTC, FEATURES, GIT_COMMIT_HASH_SHORT, GIT_DIRTY, GIT_HEAD_REF, PROFILE,
-    RUSTC_VERSION, CI_PLATFORM,
+    BUILT_TIME_UTC, FEATURES, GIT_COMMIT_HASH_SHORT, GIT_HEAD_REF, PROFILE,
+    RUSTC_VERSION, CI_PLATFORM, // GIT_DIRTY,
 };
 use rbuilder::utils::build_info::Version;
 
@@ -14,7 +14,7 @@ pub fn print_version_info() {
     // println!("dirty:      {}", GIT_DIRTY.unwrap_or_default());
     println!("commit:         {}", GIT_COMMIT_HASH_SHORT.unwrap_or_default());
     println!("branch:         {}", GIT_HEAD_REF.unwrap_or_default());
-    println!("build_platform: {}", CI_PLATFORM);
+    println!("build_platform: {:?}", CI_PLATFORM);
     println!("build_time:     {}", BUILT_TIME_UTC);
     println!("features:       {:?}", FEATURES);
     println!("profile:        {}", PROFILE);
