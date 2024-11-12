@@ -11,7 +11,10 @@ use internal::{
 use rbuilder::utils::build_info::Version;
 
 pub fn print_version_info() {
-    println!("commit:         {}", GIT_COMMIT_HASH_SHORT.unwrap_or_default());
+    println!(
+        "commit:         {}",
+        GIT_COMMIT_HASH_SHORT.unwrap_or_default()
+    );
     println!("branch:         {}", GIT_HEAD_REF.unwrap_or_default());
     println!("build_platform: {:?}", CI_PLATFORM.unwrap_or_default());
     println!("build_time:     {}", BUILT_TIME_UTC);
