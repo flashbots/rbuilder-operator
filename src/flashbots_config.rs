@@ -29,8 +29,8 @@ use rbuilder::{
     },
     utils::build_info::Version,
 };
-use reth::payload::database::CachedReads;
-use reth::providers::{DatabaseProviderFactory, HeaderProvider, StateProviderFactory};
+use reth::providers::{BlockReader, DatabaseProviderFactory, HeaderProvider, StateProviderFactory};
+use reth::revm::cached::CachedReads;
 use reth_db::Database;
 use serde::Deserialize;
 use serde_with::serde_as;
@@ -125,7 +125,11 @@ impl LiveBuilderConfig for FlashbotsConfig {
     ) -> eyre::Result<LiveBuilder<P, DB, MevBoostSlotDataGenerator>>
     where
         DB: Database + Clone + 'static,
-        P: DatabaseProviderFactory<DB> + StateProviderFactory + HeaderProvider + Clone + 'static,
+        P: DatabaseProviderFactory<DB = DB, Provider: BlockReader>
+            + StateProviderFactory
+            + HeaderProvider
+            + Clone
+            + 'static,
     {
         let (sink_factory, relays, bidding_service_win_control) = self
             .create_sink_factory_and_relays(provider.clone(), cancellation_token.clone())
@@ -154,11 +158,9 @@ impl LiveBuilderConfig for FlashbotsConfig {
         })?;
         res = res.with_extra_rpc(module);
         let root_hash_config = self.base_config.live_root_hash_config()?;
-        let root_hash_task_pool = self.base_config.root_hash_task_pool()?;
         let builders = create_builders(
             self.live_builders()?,
             root_hash_config,
-            root_hash_task_pool,
             self.base_config.sbundle_mergeabe_signers(),
         );
         res = res.with_builders(builders);
@@ -177,7 +179,10 @@ impl LiveBuilderConfig for FlashbotsConfig {
     ) -> eyre::Result<(Block, CachedReads)>
     where
         DB: Database + Clone + 'static,
-        P: DatabaseProviderFactory<DB> + StateProviderFactory + Clone + 'static,
+        P: DatabaseProviderFactory<DB = DB, Provider: BlockReader>
+            + StateProviderFactory
+            + Clone
+            + 'static,
     {
         let builder_cfg = self.builder(building_algorithm_name)?;
         match builder_cfg.builder {
@@ -299,7 +304,11 @@ impl FlashbotsConfig {
     )>
     where
         DB: Database + Clone + 'static,
-        P: DatabaseProviderFactory<DB> + StateProviderFactory + HeaderProvider + Clone + 'static,
+        P: DatabaseProviderFactory<DB = DB, Provider: BlockReader>
+            + StateProviderFactory
+            + HeaderProvider
+            + Clone
+            + 'static,
     {
         let block_processor_key = if let Some(key_registration_url) = &self.key_registration_url {
             if self.blocks_processor_url.is_none() {
