@@ -71,7 +71,7 @@ type ConsumeBuiltBlockRequest = (
     Vec<UsedBundle>,
     Vec<UsedBundle>,
     Vec<UsedSbundle>,
-    reth::rpc::types::beacon::relay::BidTrace,
+    alloy_rpc_types_beacon::relay::BidTrace,
     String,
     U256,
     U256,
