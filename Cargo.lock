@@ -5209,7 +5209,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=74b214fecf9df90d4510ce09f68afbbcdb535c4c#74b214fecf9df90d4510ce09f68afbbcdb535c4c"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=8a5e932b718beb8d36ad6594197e79e932ef16e7#8a5e932b718beb8d36ad6594197e79e932ef16e7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5860,15 +5860,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
-name = "openssl-src"
-version = "300.4.0+3.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a709e02f2b4aca747929cca5ed248880847c650233cf8b8cdc48f40aaf4898a6"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "openssl-sys"
 version = "0.9.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5876,7 +5867,6 @@ checksum = "7f9e8deee91df40a943c71b917e5874b951d32a802526c85721ce3b776c929d6"
 dependencies = [
  "cc",
  "libc",
- "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -7095,7 +7085,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=74b214fecf9df90d4510ce09f68afbbcdb535c4c#74b214fecf9df90d4510ce09f68afbbcdb535c4c"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=8a5e932b718beb8d36ad6594197e79e932ef16e7#8a5e932b718beb8d36ad6594197e79e932ef16e7"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -7229,7 +7219,6 @@ dependencies = [
  "lazy_static",
  "metrics_macros",
  "mockall",
- "openssl",
  "prometheus",
  "prost",
  "rand 0.8.5",
@@ -11426,7 +11415,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=74b214fecf9df90d4510ce09f68afbbcdb535c4c#74b214fecf9df90d4510ce09f68afbbcdb535c4c"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=8a5e932b718beb8d36ad6594197e79e932ef16e7#8a5e932b718beb8d36ad6594197e79e932ef16e7"
 dependencies = [
  "proc-macro2",
  "quote",
