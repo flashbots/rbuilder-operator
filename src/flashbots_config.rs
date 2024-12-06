@@ -325,13 +325,17 @@ impl FlashbotsConfig {
             self.l1_config.max_concurrent_seals as usize,
         ));
 
-        // UnfinishedBlockBuildingSinkFactoryWrapper
-        let wrapped_sink_factory = self.wrap_with_tbv_pusher(
-            &cancellation_token,
-            &bid_value_source,
-            block_processor_key,
-            sink_factory,
-        )?;
+        // Avoid sending TBV is we are not going to bid.
+        let wrapped_sink_factory = if self.l1_config.dry_run {
+            sink_factory
+        } else {
+            self.wrap_with_tbv_pusher(
+                &cancellation_token,
+                &bid_value_source,
+                block_processor_key,
+                sink_factory,
+            )?
+        };
 
         Ok((wrapped_sink_factory, relays, bidding_service_win_control))
     }
