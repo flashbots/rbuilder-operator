@@ -56,7 +56,7 @@ pub trait BiddingService: std::fmt::Debug + Send + Sync {
         cancel: CancellationToken,
     ) -> Arc<dyn SlotBidder>;
 
-    /// Consider moving these 3 func could be on a parent trait (I didn't want to modify the original BiddingService yet).
+    // Consider moving these 3 func could be on a parent trait (I didn't want to modify the original BiddingService yet).
 
     fn win_control(&self) -> Arc<dyn BiddingServiceWinControl>;
 
