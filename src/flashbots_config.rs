@@ -63,7 +63,6 @@ pub struct ClickhouseConfig {
 #[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq)]
 #[serde(default, deny_unknown_fields)]
 /// Config to push TBV to a redis channel.
-
 struct TBVPushRedisConfig {
     /// redis connection string for pushing best bid value
     /// Option so we can have Default for Deserialize but always required.
