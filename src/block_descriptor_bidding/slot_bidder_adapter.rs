@@ -11,7 +11,6 @@ use rbuilder::{
         bidding::interfaces::SlotBidder as FullSlotBidder,
     },
 };
-use tracing::error;
 
 use super::{
     block_registry::BlockRegistry,
