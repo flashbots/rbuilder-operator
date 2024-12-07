@@ -42,8 +42,7 @@ impl FullUnfinishedBlockBuildingSink for SlotBidderAdapter {
     fn new_block(&self, block: Box<dyn BlockBuildingHelper>) {
         let true_block_value = match block.true_block_value() {
             Ok(true_block_value) => true_block_value,
-            Err(err) => {
-                error!(err=?err,"No true block value for block");
+            Err(_) => {
                 return;
             }
         };
