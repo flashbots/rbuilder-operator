@@ -886,6 +886,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arc-swap"
+version = "1.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
+
+[[package]]
 name = "argminmax"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7644,7 +7650,7 @@ dependencies = [
  "prometheus",
  "rand 0.8.5",
  "rayon",
- "redis",
+ "redis 0.25.4",
  "reqwest 0.12.9",
  "reth",
  "reth-basic-payload-builder",
@@ -7725,7 +7731,7 @@ dependencies = [
  "prost",
  "rand 0.8.5",
  "rbuilder",
- "redis",
+ "redis 0.27.6",
  "reqwest 0.11.27",
  "reth",
  "reth-db",
@@ -7763,6 +7769,24 @@ checksum = "e0d7a6955c7511f60f3ba9e86c6d02b3c3f144f8c24b288d1f4e18074ab8bbec"
 dependencies = [
  "combine",
  "itoa",
+ "percent-encoding",
+ "ryu",
+ "sha1_smol",
+ "socket2",
+ "url",
+]
+
+[[package]]
+name = "redis"
+version = "0.27.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09d8f99a4090c89cc489a94833c901ead69bfbf3877b4867d5482e321ee875bc"
+dependencies = [
+ "arc-swap",
+ "combine",
+ "itertools 0.13.0",
+ "itoa",
+ "num-bigint",
  "percent-encoding",
  "ryu",
  "sha1_smol",
