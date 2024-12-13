@@ -14,7 +14,7 @@ use std::{
 };
 use time::OffsetDateTime;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, trace};
+use tracing::{error, info, trace};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -159,7 +159,32 @@ impl<BackendType: Backend> BestTrueValuePusher<BackendType> {
                         last_pushed_value = Some(best_local_value.clone());
                         match self.backend.publish(&mut conn, &best_local_value) {
                             Ok(()) => {
-                                trace!(?best_local_value, "Pushed best local value");
+                                let slot_end_timestamp = OffsetDateTime::from_unix_timestamp(
+                                    best_local_value.slot_end_timestamp as i64,
+                                );
+                                // log around smart multiplex decision time (-300)
+                                let important = match slot_end_timestamp {
+                                    Ok(slot_end_timestamp) => {
+                                        let slot_rel_time =
+                                            OffsetDateTime::now_utc() - slot_end_timestamp;
+                                        slot_rel_time >= time::Duration::milliseconds(-500)
+                                            && slot_rel_time <= time::Duration::milliseconds(-200)
+                                    }
+                                    Err(err) => {
+                                        error!(
+                                            ?err,
+                                            slot_end_timestamp =
+                                                best_local_value.slot_end_timestamp,
+                                            "illegal slot_end_timestamp"
+                                        );
+                                        false
+                                    }
+                                };
+                                if important {
+                                    info!(?best_local_value, "Pushed best local value");
+                                } else {
+                                    trace!(?best_local_value, "Pushed best local value");
+                                }
                             }
                             Err(err) => {
                                 error!(?err, "Failed to publish best true value bid");
