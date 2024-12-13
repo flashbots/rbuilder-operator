@@ -3041,7 +3041,7 @@ dependencies = [
 [[package]]
 name = "eth-sparse-mpt"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=35b98fa6f781738cdd81fc28ac0b9d71966bf378#35b98fa6f781738cdd81fc28ac0b9d71966bf378"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=171d8fcb2de834b6d46463979f8643756c599e86#171d8fcb2de834b6d46463979f8643756c599e86"
 dependencies = [
  "alloy-primitives 0.8.14",
  "alloy-rlp",
@@ -5703,7 +5703,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=35b98fa6f781738cdd81fc28ac0b9d71966bf378#35b98fa6f781738cdd81fc28ac0b9d71966bf378"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=171d8fcb2de834b6d46463979f8643756c599e86#171d8fcb2de834b6d46463979f8643756c599e86"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7581,7 +7581,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=35b98fa6f781738cdd81fc28ac0b9d71966bf378#35b98fa6f781738cdd81fc28ac0b9d71966bf378"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=171d8fcb2de834b6d46463979f8643756c599e86#171d8fcb2de834b6d46463979f8643756c599e86"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -12136,7 +12136,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=35b98fa6f781738cdd81fc28ac0b9d71966bf378#35b98fa6f781738cdd81fc28ac0b9d71966bf378"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=171d8fcb2de834b6d46463979f8643756c599e86#171d8fcb2de834b6d46463979f8643756c599e86"
 dependencies = [
  "proc-macro2",
  "quote",
