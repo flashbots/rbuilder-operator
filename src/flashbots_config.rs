@@ -418,7 +418,7 @@ impl FlashbotsConfig {
             let connector_clone = connector.clone();
 
             let watchdog_sender = match self.base_config().watchdog_timeout() {
-                Some(duration) => spawn_watchdog_thread(duration)?,
+                Some(duration) => spawn_watchdog_thread(duration, "got bid source".to_string())?,
                 None => {
                     eyre::bail!("Watchdog not enabled. Needed for bid source");
                 }
