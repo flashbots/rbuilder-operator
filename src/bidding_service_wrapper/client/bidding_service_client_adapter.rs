@@ -62,8 +62,8 @@ pub enum Error {
     TonicTrasport(#[from] tonic::transport::Error),
     #[error("RPC error : {0}")]
     TonicStatus(#[from] tonic::Status),
-    #[error("Initialization failed")]
-    InitFailed,
+    #[error("Initialization failed  : {0}")]
+    InitFailed(tonic::Status),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -109,7 +109,7 @@ impl BiddingServiceClientAdapter {
         let bidding_service_version = client
             .initialize(init_params)
             .await
-            .map_err(|_| Error::InitFailed)?;
+            .map_err(Error::InitFailed)?;
         let bidding_service_version = bidding_service_version.into_inner();
         set_bidding_service_version(Version {
             git_commit: bidding_service_version.git_commit,
