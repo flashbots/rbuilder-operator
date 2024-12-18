@@ -157,11 +157,7 @@ impl LiveBuilderConfig for FlashbotsConfig {
         })?;
         res = res.with_extra_rpc(module);
         let root_hash_config = self.base_config.live_root_hash_config()?;
-        let builders = create_builders(
-            self.live_builders()?,
-            root_hash_config,
-            self.base_config.sbundle_mergeabe_signers(),
-        );
+        let builders = create_builders(self.live_builders()?, root_hash_config);
         res = res.with_builders(builders);
         Ok(res)
     }
