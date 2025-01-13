@@ -21,6 +21,7 @@ use rbuilder::live_builder::config::{
 };
 use rbuilder::live_builder::watchdog::spawn_watchdog_thread;
 use rbuilder::primitives::mev_boost::MevBoostRelay;
+use rbuilder::provider::StateProviderFactory;
 use rbuilder::{
     building::builders::{BacktestSimulateBlockInput, Block},
     live_builder::{
@@ -29,9 +30,7 @@ use rbuilder::{
     },
     utils::build_info::Version,
 };
-use reth::providers::{BlockReader, DatabaseProviderFactory, HeaderProvider, StateProviderFactory};
 use reth::revm::cached::CachedReads;
-use reth_db::Database;
 use serde::Deserialize;
 use serde_with::serde_as;
 use tokio_util::sync::CancellationToken;
@@ -117,18 +116,13 @@ impl LiveBuilderConfig for FlashbotsConfig {
         &self.base_config
     }
 
-    async fn new_builder<P, DB>(
+    async fn new_builder<P>(
         &self,
         provider: P,
         cancellation_token: CancellationToken,
-    ) -> eyre::Result<LiveBuilder<P, DB, MevBoostSlotDataGenerator>>
+    ) -> eyre::Result<LiveBuilder<P, MevBoostSlotDataGenerator>>
     where
-        DB: Database + Clone + 'static,
-        P: DatabaseProviderFactory<DB = DB, Provider: BlockReader>
-            + StateProviderFactory
-            + HeaderProvider
-            + Clone
-            + 'static,
+        P: StateProviderFactory + Clone + 'static,
     {
         let (sink_factory, relays, bidding_service_win_control) = self
             .create_sink_factory_and_relays(provider.clone(), cancellation_token.clone())
@@ -156,12 +150,7 @@ impl LiveBuilderConfig for FlashbotsConfig {
             handle_subsidise_block(bidding_service_win_control.clone(), params)
         })?;
         res = res.with_extra_rpc(module);
-        let root_hash_config = self.base_config.live_root_hash_config()?;
-        let builders = create_builders(
-            self.live_builders()?,
-            root_hash_config,
-            self.base_config.sbundle_mergeabe_signers(),
-        );
+        let builders = create_builders(self.live_builders()?);
         res = res.with_builders(builders);
         Ok(res)
     }
@@ -171,17 +160,13 @@ impl LiveBuilderConfig for FlashbotsConfig {
     }
 
     /// @Pending fix this ugly copy/paste
-    fn build_backtest_block<P, DB>(
+    fn build_backtest_block<P>(
         &self,
         building_algorithm_name: &str,
         input: BacktestSimulateBlockInput<'_, P>,
     ) -> eyre::Result<(Block, CachedReads)>
     where
-        DB: Database + Clone + 'static,
-        P: DatabaseProviderFactory<DB = DB, Provider: BlockReader>
-            + StateProviderFactory
-            + Clone
-            + 'static,
+        P: StateProviderFactory + Clone + 'static,
     {
         let builder_cfg = self.builder(building_algorithm_name)?;
         match builder_cfg.builder {
@@ -292,7 +277,7 @@ impl FlashbotsConfig {
     /// BlockSealingBidderFactory: performs sealing/bidding. Sends bids to the RelaySubmitSinkFactory
     /// UnfinishedBlockBuildingSinkFactoryWrapper: sends all the tbv info via redis and forwards to BlockSealingBidderFactory
     #[allow(clippy::type_complexity)]
-    async fn create_sink_factory_and_relays<P, DB>(
+    async fn create_sink_factory_and_relays<P>(
         &self,
         provider: P,
         cancellation_token: CancellationToken,
@@ -302,12 +287,7 @@ impl FlashbotsConfig {
         Arc<dyn BiddingServiceWinControl>,
     )>
     where
-        DB: Database + Clone + 'static,
-        P: DatabaseProviderFactory<DB = DB, Provider: BlockReader>
-            + StateProviderFactory
-            + HeaderProvider
-            + Clone
-            + 'static,
+        P: StateProviderFactory + Clone + 'static,
     {
         let block_processor_key = if let Some(key_registration_url) = &self.key_registration_url {
             if self.blocks_processor_url.is_none() {

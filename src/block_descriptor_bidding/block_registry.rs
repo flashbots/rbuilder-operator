@@ -89,6 +89,7 @@ mod tests {
             assert_eq!(block.can_add_payout_tx(), can_add_payout_tx);
         }
         // it should remember the last MAX_BLOCKS
+        #[allow(clippy::needless_range_loop)]
         for i in 1..=MAX_BLOCKS {
             let true_block_value = U256::from(i + initial_true_block_value);
             let can_add_payout_tx = i % 2 == 0;

@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+
 use ctor::ctor;
 use lazy_static::lazy_static;
 use metrics_macros::register_metrics;
