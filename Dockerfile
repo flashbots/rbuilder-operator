@@ -1,6 +1,6 @@
 FROM rust:1.82-bullseye@sha256:c42c8ca762560c182ba30edda0e0d71a8604040af2672370559d7e854653c66d AS builder
 
-ARG BUILD_PROFILE=reproducible
+ARG BUILD_PROFILE=release
 ENV BUILD_PROFILE=$BUILD_PROFILE
 
 # Extra Cargo flags
