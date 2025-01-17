@@ -25,15 +25,45 @@ clean: ## Clean up
 build: ## Build static binary for x86_64
 	cargo build --release --target x86_64-unknown-linux-gnu
 
+# Environment variables for reproducible builds
+# Initialize RUSTFLAGS
+RUST_BUILD_FLAGS =
+
+# Statically link the C runtime library for standalone binaries
+RUST_BUILD_FLAGS += -C target-feature=+crt-static
+
+# Remove build ID from the binary to ensure reproducibility across builds
+RUST_BUILD_FLAGS += -C link-arg=-Wl,--build-id=none
+
+# Statically link against libgcc to remove runtime dependencies
+RUST_BUILD_FLAGS += -C link-arg=-static-libgcc
+
+# Remove metadata hash from symbol names to ensure reproducible builds
+RUST_BUILD_FLAGS += -C metadata=''
+
 # Set timestamp from last git commit for reproducible builds
 SOURCE_DATE ?= $(shell git log -1 --pretty=%ct)
+
+# Disable incremental compilation to avoid non-deterministic artifacts
+CARGO_INCREMENTAL_VAL = 0
+
+# Set C locale for consistent string handling and sorting
+LOCALE_VAL = C
+
+# Set UTC timezone for consistent time handling across builds
+TZ_VAL = UTC
 
 # Set the target for the build, default to x86_64
 TARGET ?= x86_64-unknown-linux-gnu
 
 .PHONY: build-reproducible
 build-reproducible: ## Build reproducible static binary for x86_64
+	# Set timestamp from last git commit for reproducible builds
 	SOURCE_DATE_EPOCH=$(SOURCE_DATE) \
+	RUSTFLAGS="${RUST_BUILD_FLAGS} --remap-path-prefix $$(pwd)=." \
+	CARGO_INCREMENTAL=${CARGO_INCREMENTAL_VAL} \
+	LC_ALL=${LOCALE_VAL} \
+	TZ=${TZ_VAL} \
 	cargo build --release --locked --target $(TARGET)
 
 .PHONY: docker-image
