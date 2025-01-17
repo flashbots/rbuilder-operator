@@ -3,8 +3,17 @@ FROM rust:1.82-bullseye@sha256:c42c8ca762560c182ba30edda0e0d71a8604040af26723705
 ARG BUILD_PROFILE=release
 ENV BUILD_PROFILE=$BUILD_PROFILE
 
-# Extra Cargo flags
-ARG RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-Wl,--build-id=none -Clink-arg=-static-libgcc -C metadata='' --remap-path-prefix $(pwd)=."
+# RUSTFLAGS breakdown:
+# -C target-feature=+crt-static     -> Statically link the C runtime library for standalone binaries
+# -C link-arg=-Wl,--build-id=none   -> Remove build ID from binary for reproducibility
+# -Clink-arg=-static-libgcc         -> Statically link against libgcc
+# -C metadata=''                    -> Remove metadata hash from symbol names for reproducible builds
+# --remap-path-prefix $(pwd)=.      -> Replace absolute paths with '.' in debug info
+ARG RUSTFLAGS="-C target-feature=+crt-static \
+    -C link-arg=-Wl,--build-id=none \
+    -Clink-arg=-static-libgcc \
+    -C metadata='' \
+    --remap-path-prefix $(pwd)=."
 ENV RUSTFLAGS="$RUSTFLAGS"
 
 # Extra Cargo features
