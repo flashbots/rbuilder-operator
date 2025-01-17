@@ -29,14 +29,8 @@ build: ## Build static binary for x86_64
 # Initialize RUSTFLAGS
 RUST_BUILD_FLAGS =
 
-# Statically link the C runtime library for standalone binaries
-RUST_BUILD_FLAGS += -C target-feature=+crt-static
-
 # Remove build ID from the binary to ensure reproducibility across builds
 RUST_BUILD_FLAGS += -C link-arg=-Wl,--build-id=none
-
-# Statically link against libgcc to remove runtime dependencies
-RUST_BUILD_FLAGS += -C link-arg=-static-libgcc
 
 # Remove metadata hash from symbol names to ensure reproducible builds
 RUST_BUILD_FLAGS += -C metadata=''
