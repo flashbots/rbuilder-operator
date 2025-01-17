@@ -94,12 +94,7 @@ jobs:
         run: |
           git config --global --add safe.directory "$(pwd)"
           . $HOME/.cargo/env
-          SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
-          RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-Wl,--build-id=none -Clink-arg=-static-libgcc -C metadata='' --remap-path-prefix $(pwd)=." \
-          CARGO_INCREMENTAL=0 \
-          LC_ALL=C \
-          TZ=UTC \
-          cargo build --release --locked --target ${{ matrix.configs.target }}
+          make build-reproducible TARGET=${{ matrix.configs.target }}
           ./target/${{ matrix.configs.target }}/release/rbuilder version
 
       - name: Upload artifact
