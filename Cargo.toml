@@ -4,34 +4,34 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-reth = { git = "https://github.com/paradigmxyz/reth", tag = "v1.1.2" }
-reth-db = { git = "https://github.com/paradigmxyz/reth", tag = "v1.1.2" }
-reth-payload-builder = { git = "https://github.com/paradigmxyz/reth", tag = "v1.1.2" }
+reth = { git = "https://github.com/paradigmxyz/reth", tag = "v1.1.5" }
+reth-db = { git = "https://github.com/paradigmxyz/reth", tag = "v1.1.5" }
+reth-payload-builder = { git = "https://github.com/paradigmxyz/reth", tag = "v1.1.5" }
 
 
-alloy-primitives = { version = "0.8.11", default-features = false }
-alloy-provider = { version = "0.6.4", features = ["ipc", "pubsub"] }
-alloy-json-rpc = { version = "0.6.4" }
-alloy-transport-http = { version = "0.6.4" }
-alloy-transport = { version = "0.6.4" }
-alloy-rpc-types-beacon = { version = "0.6.4", features = ["ssz"] }
-alloy-signer-local = { version = "0.6.4" }
+alloy-primitives = { version = "0.8.15", default-features = false }
+alloy-provider = { version = "0.9.2", features = ["ipc", "pubsub"] }
+alloy-json-rpc = { version = "0.9.2" }
+alloy-transport-http = { version = "0.9.2" }
+alloy-transport = { version = "0.9.2" }
+alloy-rpc-types-beacon = { version = "0.9.2", features = ["ssz"] }
+alloy-signer-local = { version = "0.9.2" }
 
-alloy-signer = { version = "0.6.4" }
-alloy-rpc-client = { version = "0.6.4" }
+alloy-signer = { version = "0.9.2" }
+alloy-rpc-client = { version = "0.9.2" }
 
 clap = { version = "4.4.3", features = ["derive", "env"] }
-tokio = "1.32.0"
-tokio-util = "0.7.10"
-eyre = "0.6.8"
-serde = "1.0.188"
-serde_json = "1.0.105"
-serde_with = { version = "3.8.1", features = ["time_0_3"] }
+tokio = "1.40.0"
+tokio-util = "0.7.12"
+eyre = "0.6.12"
+serde = "1.0.210"
+serde_json = "1.0.128"
+serde_with = { version = "3.9.0", features = ["time_0_3"] }
 toml = "0.8.8"
 jsonrpsee = { version = "0.20.3", features = ["full"] }
 tracing = "0.1.37"
-time = { version = "0.3.28", features = ["macros", "formatting", "parsing"] }
-thiserror = "1.0.47"
+time = { version = "0.3.36", features = ["macros", "formatting", "parsing"] }
+thiserror = "1.0.64"
 tungstenite = "0.23.0"
 ahash = "0.8.6"
 itertools = "0.11.0"
@@ -48,20 +48,20 @@ redis = "0.25.4"
 tonic = "0.8"
 prost = "0.11"
 tokio-stream = { version = "0.1", features = ["net"] }
-futures = "0.3"
+futures = "0.3.28"
 tower = "0.4"
 reqwest = { version = "0.11.20", features = ["blocking"] }
 secp256k1 = { version = "0.29" }
-url = "2.4.1"
+url = "2.5.2"
 http = "0.2.9"
 hyper = "0.14"
-futures-util = "0.3"
+futures-util = "0.3.31"
 
 
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "51284e32157ae6d9be53e749ef89c6905aac1855"}
+metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "2182f960c4dd21024e292aa9d28ab110b52d8636"}
 
 #rbuilder = {path="./../rbuilder/crates/rbuilder"}
-rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "51284e32157ae6d9be53e749ef89c6905aac1855"}
+rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "2182f960c4dd21024e292aa9d28ab110b52d8636"}
 
 [build-dependencies]
 built = { version = "0.7.1", features = ["git2", "chrono"] }
