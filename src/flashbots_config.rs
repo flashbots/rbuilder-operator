@@ -20,7 +20,7 @@ use rbuilder::live_builder::config::{
     create_builders, BuilderConfig, SpecificBuilderConfig, WALLET_INIT_HISTORY_SIZE,
 };
 use rbuilder::live_builder::watchdog::spawn_watchdog_thread;
-use rbuilder::primitives::mev_boost::MevBoostRelay;
+use rbuilder::primitives::mev_boost::MevBoostRelaySlotInfoProvider;
 use rbuilder::provider::StateProviderFactory;
 use rbuilder::{
     building::builders::{BacktestSimulateBlockInput, Block},
@@ -124,13 +124,13 @@ impl LiveBuilderConfig for FlashbotsConfig {
     where
         P: StateProviderFactory + Clone + 'static,
     {
-        let (sink_factory, relays, bidding_service_win_control) = self
+        let (sink_factory, slot_info_provider, bidding_service_win_control) = self
             .create_sink_factory_and_relays(provider.clone(), cancellation_token.clone())
             .await?;
 
         let payload_event = MevBoostSlotDataGenerator::new(
             self.l1_config.beacon_clients()?,
-            relays,
+            slot_info_provider,
             self.base_config.blocklist()?,
             cancellation_token.clone(),
         );
@@ -283,7 +283,7 @@ impl FlashbotsConfig {
         cancellation_token: CancellationToken,
     ) -> eyre::Result<(
         Box<dyn UnfinishedBlockBuildingSinkFactory>,
-        Vec<MevBoostRelay>,
+        Vec<MevBoostRelaySlotInfoProvider>,
         Arc<dyn BiddingServiceWinControl>,
     )>
     where
@@ -299,7 +299,7 @@ impl FlashbotsConfig {
         };
         // RelaySubmitSinkFactory
         let bid_observer = self.create_block_processor_client(block_processor_key.clone())?;
-        let (sink_sealed_factory, relays) = self
+        let (sink_sealed_factory, slot_info_provider) = self
             .l1_config
             .create_relays_sealed_sink_factory(self.base_config.chain_spec()?, bid_observer)?;
 
@@ -335,7 +335,11 @@ impl FlashbotsConfig {
             )?
         };
 
-        Ok((wrapped_sink_factory, relays, bidding_service_win_control))
+        Ok((
+            wrapped_sink_factory,
+            slot_info_provider,
+            bidding_service_win_control,
+        ))
     }
 
     /// Wraps the factory with one that sends a to TBV stream to our infra.

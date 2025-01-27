@@ -6,7 +6,7 @@ use jsonrpsee::{
 use rbuilder::{
     building::BuiltBlockTrace,
     live_builder::block_output::bid_observer::BidObserver,
-    mev_boost::SubmitBlockRequest,
+    mev_boost::submission::SubmitBlockRequest,
     primitives::{
         serialize::{RawBundle, RawShareBundle},
         Order,
