@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use rbuilder::building::builders::block_building_helper::BlockBuildingHelper;
+use rbuilder::building::builders::block_building_helper::BiddableUnfinishedBlock;
 
 use super::traits::BlockId;
 
@@ -13,7 +13,7 @@ pub struct BlockRegistry {
     last_generated_block_id: u64,
     /// Id of first block in blocks. The following blocks have sequential ids.
     first_block_id: u64,
-    blocks: VecDeque<Box<dyn BlockBuildingHelper>>,
+    blocks: VecDeque<BiddableUnfinishedBlock>,
     max_blocks_to_keep: usize,
 }
 
@@ -39,7 +39,7 @@ impl BlockRegistry {
         }
     }
 
-    pub fn add_block(&mut self, block: Box<dyn BlockBuildingHelper>) -> BlockId {
+    pub fn add_block(&mut self, block: BiddableUnfinishedBlock) -> BlockId {
         self.blocks.push_back(block);
         if self.blocks.len() > self.max_blocks_to_keep {
             self.blocks.pop_front();
@@ -56,18 +56,21 @@ impl BlockRegistry {
         }
     }
 
-    pub fn get_block_clon(&self, id: BlockId) -> Option<Box<dyn BlockBuildingHelper>> {
+    pub fn get_block_clon(&self, id: BlockId) -> Option<BiddableUnfinishedBlock> {
         if id.0 < self.first_block_id || id.0 >= self.first_block_id + self.blocks.len() as u64 {
             return None;
         }
-        Some(self.blocks[(id.0 - self.first_block_id) as usize].box_clone())
+        Some(self.blocks[(id.0 - self.first_block_id) as usize].clone())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use alloy_primitives::U256;
-    use rbuilder::building::builders::mock_block_building_helper::MockBlockBuildingHelper;
+    use rbuilder::building::builders::{
+        block_building_helper::BiddableUnfinishedBlock,
+        mock_block_building_helper::MockBlockBuildingHelper,
+    };
 
     use super::BlockRegistry;
     const MAX_BLOCKS: usize = 10;
@@ -79,13 +82,16 @@ mod tests {
         for i in 0..=MAX_BLOCKS {
             let true_block_value = U256::from(i + initial_true_block_value);
             let can_add_payout_tx = i % 2 == 0;
-            let block_id = registry.add_block(Box::new(MockBlockBuildingHelper::new(
-                true_block_value,
-                can_add_payout_tx,
-            )));
+            let block_id = registry.add_block(
+                BiddableUnfinishedBlock::new(Box::new(MockBlockBuildingHelper::new(
+                    true_block_value,
+                    can_add_payout_tx,
+                )))
+                .unwrap(),
+            );
             block_ids.push(block_id.clone());
             let block = registry.get_block_clon(block_id).unwrap();
-            assert_eq!(block.true_block_value().unwrap(), true_block_value);
+            assert_eq!(block.true_block_value(), true_block_value);
             assert_eq!(block.can_add_payout_tx(), can_add_payout_tx);
         }
         // it should remember the last MAX_BLOCKS

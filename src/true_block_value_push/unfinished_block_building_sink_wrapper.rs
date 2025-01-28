@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use super::best_true_value_pusher::{BestTrueValue, BestTrueValueCell};
 use rbuilder::{
-    building::builders::{block_building_helper::BlockBuildingHelper, UnfinishedBlockBuildingSink},
+    building::builders::{
+        block_building_helper::{BiddableUnfinishedBlock, BlockBuildingHelper},
+        UnfinishedBlockBuildingSink,
+    },
     live_builder::block_output::bid_value_source::{
         best_bid_sync_source::BestBidSyncSource, interfaces::BidValueSource,
     },
@@ -54,7 +57,7 @@ impl UnfinishedBlockBuildingSinkWrapper {
 
 impl UnfinishedBlockBuildingSink for UnfinishedBlockBuildingSinkWrapper {
     /// Update self.best_local_value and forward to self.sink.
-    fn new_block(&self, block: Box<dyn BlockBuildingHelper>) {
+    fn new_block(&self, block: BiddableUnfinishedBlock) {
         // We should fix this on the design so block.true_block_value() is always valid since this check is all over.
         if let Ok(true_block_value) = block.true_block_value() {
             let best_true_value = BestTrueValue::new(

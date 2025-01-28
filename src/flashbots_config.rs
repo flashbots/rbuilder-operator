@@ -325,7 +325,6 @@ impl FlashbotsConfig {
             sink_sealed_factory,
             bid_value_source.clone(),
             wallet_balance_watcher,
-            self.l1_config.max_concurrent_seals as usize,
         ));
 
         // Avoid sending TBV is we are not going to bid.

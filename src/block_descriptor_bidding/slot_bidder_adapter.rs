@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use alloy_primitives::U256;
 use rbuilder::{
     building::builders::{
-        block_building_helper::BlockBuildingHelper,
+        block_building_helper::{BiddableUnfinishedBlock, BlockBuildingHelper},
         UnfinishedBlockBuildingSink as FullUnfinishedBlockBuildingSink,
     },
     live_builder::block_output::{
@@ -38,13 +38,8 @@ impl SlotBidderAdapter {
 }
 
 impl FullUnfinishedBlockBuildingSink for SlotBidderAdapter {
-    fn new_block(&self, block: Box<dyn BlockBuildingHelper>) {
-        let true_block_value = match block.true_block_value() {
-            Ok(true_block_value) => true_block_value,
-            Err(_) => {
-                return;
-            }
-        };
+    fn new_block(&self, block: BiddableUnfinishedBlock) {
+        let true_block_value = block.true_block_value();
         // filter increasing true_block_value.
         {
             let mut best_true_block_value = self.best_true_block_value.lock().unwrap();
