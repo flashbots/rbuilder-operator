@@ -128,10 +128,14 @@ impl LiveBuilderConfig for FlashbotsConfig {
             .create_sink_factory_and_relays(provider.clone(), cancellation_token.clone())
             .await?;
 
+        let blocklist_provider = self
+            .base_config
+            .blocklist_provider(cancellation_token.clone())
+            .await?;
         let payload_event = MevBoostSlotDataGenerator::new(
             self.l1_config.beacon_clients()?,
             slot_info_provider,
-            self.base_config.blocklist()?,
+            blocklist_provider.clone(),
             cancellation_token.clone(),
         );
 
@@ -142,6 +146,7 @@ impl LiveBuilderConfig for FlashbotsConfig {
                 sink_factory,
                 payload_event,
                 provider,
+                blocklist_provider,
             )
             .await?;
 
