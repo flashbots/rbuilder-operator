@@ -11,7 +11,7 @@ use rbuilder::{
     },
 };
 
-/// Wraps a UnfinishedBlockBuildingSink sending all the new block info to redis via a BestTrueValueCell.
+/// Wraps a UnfinishedBlockBuildingSink updating all the new block info on a BestTrueValueCell.
 /// Updates on every new_block but not on competition best bid changes.
 pub struct UnfinishedBlockBuildingSinkWrapper {
     sink: Arc<dyn UnfinishedBlockBuildingSink>,
@@ -58,20 +58,17 @@ impl UnfinishedBlockBuildingSinkWrapper {
 impl UnfinishedBlockBuildingSink for UnfinishedBlockBuildingSinkWrapper {
     /// Update self.best_local_value and forward to self.sink.
     fn new_block(&self, block: BiddableUnfinishedBlock) {
-        // We should fix this on the design so block.true_block_value() is always valid since this check is all over.
-        if let Ok(true_block_value) = block.true_block_value() {
-            let best_true_value = BestTrueValue::new(
-                self.block_number,
-                self.slot_number,
-                true_block_value,
-                self.best_bid_sync_source
-                    .best_bid_value()
-                    .unwrap_or_default(),
-                self.slot_timestamp,
-            );
-            self.best_local_value.update_value_safe(best_true_value);
-            self.sink.new_block(block);
-        }
+        let best_true_value = BestTrueValue::new(
+            self.block_number,
+            self.slot_number,
+            block.true_block_value(),
+            self.best_bid_sync_source
+                .best_bid_value()
+                .unwrap_or_default(),
+            self.slot_timestamp,
+        );
+        self.best_local_value.update_value_safe(best_true_value);
+        self.sink.new_block(block);
     }
 
     fn can_use_suggested_fee_recipient_as_coinbase(&self) -> bool {
