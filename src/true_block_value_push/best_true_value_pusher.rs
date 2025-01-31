@@ -18,7 +18,7 @@ use tracing::{error, trace};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct BestTrueValue {
+pub struct BuiltBlockInfo {
     pub timestamp_ms: u64,
     pub block_number: u64,
     pub slot_number: u64,
@@ -32,7 +32,7 @@ pub struct BestTrueValue {
     pub slot_end_timestamp: u64,
 }
 
-impl BestTrueValue {
+impl BuiltBlockInfo {
     pub fn new(
         block_number: u64,
         slot_number: u64,
@@ -40,7 +40,7 @@ impl BestTrueValue {
         best_relay_value: U256,
         slot_end_timestamp: u64,
     ) -> Self {
-        BestTrueValue {
+        BuiltBlockInfo {
             timestamp_ms: (OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000) as u64,
             block_number,
             slot_number,
@@ -62,38 +62,30 @@ impl BestTrueValue {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct BestTrueValueCell {
-    data: Arc<Mutex<BestTrueValue>>,
+pub struct LastBuiltBlockInfoCell {
+    data: Arc<Mutex<BuiltBlockInfo>>,
 }
 
-impl BestTrueValueCell {
-    pub fn update_value_safe(&self, value: BestTrueValue) {
+impl LastBuiltBlockInfoCell {
+    pub fn update_value_safe(&self, value: BuiltBlockInfo) {
         let mut best_value = self.data.lock().unwrap();
         if value.slot_number < best_value.slot_number {
             // don't update value for the past slot
             return;
         }
-        if value.slot_number == best_value.slot_number
-            && value.block_number == best_value.block_number
-            && value.best_true_value < best_value.best_true_value
-        {
-            // don't update value if its lower
-            return;
-        }
         *best_value = value;
     }
 
-    pub fn read(&self) -> BestTrueValue {
+    pub fn read(&self) -> BuiltBlockInfo {
         self.data.lock().unwrap().clone()
     }
 }
 
-/// BestTrueValueRedisSync keeps best true value for the current block synced with other builders
-/// using redis.
+/// BuiltBlockInfoPusher periodically sends last BuiltBlockInfo via a configurable backend.
 #[derive(Debug, Clone)]
-pub struct BestTrueValuePusher<BackendType> {
+pub struct BuiltBlockInfoPusher<BackendType> {
     /// Best value we got from our building algorithms.
-    best_local_value: BestTrueValueCell,
+    last_local_value: LastBuiltBlockInfoCell,
     backend: BackendType,
 
     cancellation_token: CancellationToken,
@@ -102,7 +94,7 @@ pub struct BestTrueValuePusher<BackendType> {
 const PUSH_INTERVAL: Duration = Duration::from_millis(50);
 const MAX_IO_ERRORS: usize = 5;
 
-/// Trait to connect and publish new tbv data (as a &str)
+/// Trait to connect and publish new BuiltBlockInfo data (as a &str)
 /// For simplification mixes a little the factory role and the publish role.
 pub trait Backend {
     type Connection;
@@ -113,25 +105,25 @@ pub trait Backend {
     fn publish(
         &self,
         connection: &mut Self::Connection,
-        best_true_value: &BestTrueValue,
+        best_true_value: &BuiltBlockInfo,
     ) -> Result<(), Self::BackendError>;
 }
 
-impl<BackendType: Backend> BestTrueValuePusher<BackendType> {
+impl<BackendType: Backend> BuiltBlockInfoPusher<BackendType> {
     pub fn new(
-        best_local_value: BestTrueValueCell,
+        last_local_value: LastBuiltBlockInfoCell,
         backend: BackendType,
         cancellation_token: CancellationToken,
     ) -> Self {
         Self {
-            best_local_value,
+            last_local_value,
             backend,
             cancellation_token,
         }
     }
 
-    /// Run the task that pushes the best true value bid to redis.
-    /// The value is read from best_local_value and pushed to redis.
+    /// Run the task that pushes the last BuiltBlockInfo.
+    /// The value is read from last_local_value and pushed to redis.
     pub fn run_push_task(self) {
         run_loop_with_reconnect(
             "push_best_bid",
@@ -140,7 +132,7 @@ impl<BackendType: Backend> BestTrueValuePusher<BackendType> {
             },
             |mut conn| -> RunCommand {
                 let mut io_errors = 0;
-                let mut last_pushed_value: Option<BestTrueValue> = None;
+                let mut last_pushed_value: Option<BuiltBlockInfo> = None;
                 loop {
                     if self.cancellation_token.is_cancelled() {
                         break;
@@ -151,18 +143,18 @@ impl<BackendType: Backend> BestTrueValuePusher<BackendType> {
                     }
 
                     sleep(PUSH_INTERVAL);
-                    let best_local_value = self.best_local_value.read();
+                    let last_local_value = self.last_local_value.read();
                     if last_pushed_value
                         .as_ref()
-                        .map_or(true, |value| !value.is_same_bid_info(&best_local_value))
+                        .map_or(true, |value| !value.is_same_bid_info(&last_local_value))
                     {
-                        last_pushed_value = Some(best_local_value.clone());
-                        match self.backend.publish(&mut conn, &best_local_value) {
+                        last_pushed_value = Some(last_local_value.clone());
+                        match self.backend.publish(&mut conn, &last_local_value) {
                             Ok(()) => {
-                                trace!(?best_local_value, "Pushed best local value");
+                                trace!(?last_local_value, "Pushed last local value");
                             }
                             Err(err) => {
-                                error!(?err, "Failed to publish best true value bid");
+                                error!(?err, "Failed to publish last true value bid");
                                 io_errors += 1;
                             }
                         }

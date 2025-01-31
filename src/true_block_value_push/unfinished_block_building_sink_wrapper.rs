@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use super::best_true_value_pusher::{BestTrueValue, BestTrueValueCell};
+use super::best_true_value_pusher::{BuiltBlockInfo, LastBuiltBlockInfoCell};
 use rbuilder::{
     building::builders::{
-        block_building_helper::{BiddableUnfinishedBlock, BlockBuildingHelper},
-        UnfinishedBlockBuildingSink,
+        block_building_helper::BiddableUnfinishedBlock, UnfinishedBlockBuildingSink,
     },
     live_builder::block_output::bid_value_source::{
         best_bid_sync_source::BestBidSyncSource, interfaces::BidValueSource,
@@ -15,7 +14,7 @@ use rbuilder::{
 /// Updates on every new_block but not on competition best bid changes.
 pub struct UnfinishedBlockBuildingSinkWrapper {
     sink: Arc<dyn UnfinishedBlockBuildingSink>,
-    best_local_value: BestTrueValueCell,
+    last_local_value: LastBuiltBlockInfoCell,
     best_bid_sync_source: BestBidSyncSource,
     block_number: u64,
     slot_number: u64,
@@ -34,7 +33,7 @@ impl std::fmt::Debug for UnfinishedBlockBuildingSinkWrapper {
 impl UnfinishedBlockBuildingSinkWrapper {
     pub fn new(
         sink: Arc<dyn UnfinishedBlockBuildingSink>,
-        best_local_value: BestTrueValueCell,
+        last_local_value: LastBuiltBlockInfoCell,
         competition_bid_value_source: Arc<dyn BidValueSource + Send + Sync>,
         block_number: u64,
         slot_number: u64,
@@ -42,7 +41,7 @@ impl UnfinishedBlockBuildingSinkWrapper {
     ) -> Self {
         Self {
             sink,
-            best_local_value,
+            last_local_value,
             best_bid_sync_source: BestBidSyncSource::new(
                 competition_bid_value_source,
                 block_number,
@@ -58,7 +57,7 @@ impl UnfinishedBlockBuildingSinkWrapper {
 impl UnfinishedBlockBuildingSink for UnfinishedBlockBuildingSinkWrapper {
     /// Update self.best_local_value and forward to self.sink.
     fn new_block(&self, block: BiddableUnfinishedBlock) {
-        let best_true_value = BestTrueValue::new(
+        let last_true_value = BuiltBlockInfo::new(
             self.block_number,
             self.slot_number,
             block.true_block_value(),
@@ -67,7 +66,7 @@ impl UnfinishedBlockBuildingSink for UnfinishedBlockBuildingSinkWrapper {
                 .unwrap_or_default(),
             self.slot_timestamp,
         );
-        self.best_local_value.update_value_safe(best_true_value);
+        self.last_local_value.update_value_safe(last_true_value);
         self.sink.new_block(block);
     }
 

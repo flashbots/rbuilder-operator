@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use alloy_primitives::U256;
 use rbuilder::{
     building::builders::{
-        block_building_helper::{BiddableUnfinishedBlock, BlockBuildingHelper},
+        block_building_helper::BiddableUnfinishedBlock,
         UnfinishedBlockBuildingSink as FullUnfinishedBlockBuildingSink,
     },
     live_builder::block_output::{
