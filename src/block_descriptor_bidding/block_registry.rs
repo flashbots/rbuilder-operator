@@ -100,7 +100,7 @@ mod tests {
             let true_block_value = U256::from(i + initial_true_block_value);
             let can_add_payout_tx = i % 2 == 0;
             let block = registry.get_block_clon(block_ids[i].clone()).unwrap();
-            assert_eq!(block.true_block_value().unwrap(), true_block_value);
+            assert_eq!(block.true_block_value(), true_block_value);
             assert_eq!(block.can_add_payout_tx(), can_add_payout_tx);
         }
         // the oldest should not be stored.
