@@ -19,10 +19,8 @@ use super::{
 
 /// Adapter from SlotBidder to FullSlotBidder.
 /// It uses a block_registry to go from BlockBuildingHelper->BlockId.
-/// It filters only blocks with increasing true_block_value to limit the use of the block_registry.
 #[derive(Debug)]
 pub struct SlotBidderAdapter {
-    best_true_block_value: Mutex<Option<U256>>,
     bidder: Arc<dyn SlotBidder>,
     block_registry: Arc<Mutex<BlockRegistry>>,
 }
@@ -30,7 +28,6 @@ pub struct SlotBidderAdapter {
 impl SlotBidderAdapter {
     pub fn new(bidder: Arc<dyn SlotBidder>, block_registry: Arc<Mutex<BlockRegistry>>) -> Self {
         Self {
-            best_true_block_value: Default::default(),
             bidder,
             block_registry,
         }
@@ -40,14 +37,6 @@ impl SlotBidderAdapter {
 impl FullUnfinishedBlockBuildingSink for SlotBidderAdapter {
     fn new_block(&self, block: BiddableUnfinishedBlock) {
         let true_block_value = block.true_block_value();
-        // filter increasing true_block_value.
-        {
-            let mut best_true_block_value = self.best_true_block_value.lock().unwrap();
-            if best_true_block_value.map_or(false, |best| best >= true_block_value) {
-                return;
-            }
-            *best_true_block_value = Some(true_block_value);
-        }
         let can_add_payout_tx = block.can_add_payout_tx();
         let block_id = self.block_registry.lock().unwrap().add_block(block);
         self.bidder.new_block(BlockDescriptor {
