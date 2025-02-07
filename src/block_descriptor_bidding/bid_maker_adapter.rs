@@ -35,9 +35,11 @@ impl BidMaker for BidMakerAdapter {
             .unwrap()
             .get_block_clon(bid.block_id)
         {
-            Some(block) => self
-                .full_bid_maker
-                .send_bid(FullBid::new(block, bid.payout_tx_value)),
+            Some(block) => self.full_bid_maker.send_bid(FullBid::new(
+                block,
+                bid.payout_tx_value,
+                bid.seen_competition_bid,
+            )),
             None => error!("Tried to bid with lost block"),
         }
     }

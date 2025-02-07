@@ -106,8 +106,10 @@ message TestResponse {
 
 message Bid {
     // Optional implicitly by allowing empty
-    repeated uint64 true_block_value = 1; // Array of 4 uint64
+    repeated uint64 payout_tx_value = 1; // Array of 4 uint64
     uint64 block_id = 2;
+    // Optional implicitly by allowing empty
+    repeated uint64 seen_competition_bid = 3; // Array of 4 uint64
 }    
 
 
