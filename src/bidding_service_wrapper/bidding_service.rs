@@ -107,9 +107,14 @@ pub struct Bid {
     ///
     /// Array of 4 uint64
     #[prost(uint64, repeated, tag = "1")]
-    pub true_block_value: ::prost::alloc::vec::Vec<u64>,
+    pub payout_tx_value: ::prost::alloc::vec::Vec<u64>,
     #[prost(uint64, tag = "2")]
     pub block_id: u64,
+    /// Optional implicitly by allowing empty
+    ///
+    /// Array of 4 uint64
+    #[prost(uint64, repeated, tag = "3")]
+    pub seen_competition_bid: ::prost::alloc::vec::Vec<u64>,
 }
 /// Exactly 1 member will be not null.
 /// Since this is not mapped to an enum we must be careful to manually update BiddingServiceClientAdapter.

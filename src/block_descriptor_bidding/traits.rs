@@ -27,6 +27,7 @@ pub struct BlockDescriptor {
 pub struct Bid {
     pub block_id: BlockId,
     pub payout_tx_value: Option<U256>,
+    pub seen_competition_bid: Option<U256>,
 }
 
 /// Simplified version of [rbuilder::live_builder::block_output::bidding::interfaces::BidMaker]

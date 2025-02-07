@@ -154,6 +154,14 @@ impl BiddingServiceClientAdapter {
         Ok(commands_sender)
     }
 
+    fn parse_option_u256(limbs: Vec<u64>) -> Option<U256> {
+        if limbs.is_empty() {
+            None
+        } else {
+            Some(U256::from_limbs_slice(&limbs))
+        }
+    }
+
     /// Calls create_slot_bidder via RPC to init the bidder.
     async fn create_slot_bidder(
         client: &mut BiddingServiceClient<Channel>,
@@ -174,12 +182,9 @@ impl BiddingServiceClientAdapter {
                             callback = stream.next() => {
                                 if let Some(Ok(callback)) = callback {
                                     if let Some(bid) = callback.bid {
-                                        let payout_tx_value = if bid.true_block_value.is_empty(){
-                                            None
-                                        }else{
-                                            Some(U256::from_limbs_slice(&bid.true_block_value))
-                                        };
-                                        create_slot_bidder_data.bid_maker.send_bid(Bid{ block_id: BlockId(bid.block_id), payout_tx_value});
+                                        let payout_tx_value = Self::parse_option_u256(bid.payout_tx_value);
+                                        let seen_competition_bid = Self::parse_option_u256(bid.seen_competition_bid);
+                                        create_slot_bidder_data.bid_maker.send_bid(Bid{ block_id: BlockId(bid.block_id), payout_tx_value,seen_competition_bid});
                                     } else if let Some(can_use_suggested_fee_recipient_as_coinbase_change) = callback.can_use_suggested_fee_recipient_as_coinbase_change {
                                         create_slot_bidder_data.can_use_suggested_fee_recipient_as_coinbase.store(can_use_suggested_fee_recipient_as_coinbase_change,std::sync::atomic::Ordering::SeqCst);
                                     }
