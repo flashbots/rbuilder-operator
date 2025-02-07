@@ -1,7 +1,7 @@
 use redis::Commands;
 use tracing::error;
 
-use super::best_true_value_pusher::{Backend, BestTrueValue};
+use super::best_true_value_pusher::{Backend, BuiltBlockInfo};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -37,7 +37,7 @@ impl Backend for RedisBackend {
     fn publish(
         &self,
         connection: &mut Self::Connection,
-        best_true_value: &BestTrueValue,
+        best_true_value: &BuiltBlockInfo,
     ) -> Result<(), Self::BackendError> {
         let best_true_value = serde_json::to_string(&best_true_value)?;
         Ok(connection.publish(&self.channel_name, &best_true_value)?)

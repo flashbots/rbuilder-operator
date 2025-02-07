@@ -30,7 +30,6 @@ live_builders = ["mp-ordering", "mgp-ordering", "parallel"]
 
 top_bid_ws_url = "env:TOP_BID_WS_URL"
 top_bid_ws_basic_auth = "env:TOP_BID_WS_BASIC_AUTH"
-max_concurrent_seals = 4
 
 bidding_service_ipc_path = "/tmp/rpc_bidding_server.sock"
 

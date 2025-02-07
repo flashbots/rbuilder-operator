@@ -12,7 +12,7 @@ use redis::RedisError;
 use tokio_util::sync::CancellationToken;
 
 use super::{
-    best_true_value_pusher::{Backend, BestTrueValueCell, BestTrueValuePusher},
+    best_true_value_pusher::{Backend, BuiltBlockInfoPusher, LastBuiltBlockInfoCell},
     blocks_processor_backend::{self, BlocksProcessorBackend},
     redis_backend::RedisBackend,
     unfinished_block_building_sink_wrapper::UnfinishedBlockBuildingSinkWrapper,
@@ -22,7 +22,7 @@ use super::{
 #[derive(Debug)]
 pub struct UnfinishedBlockBuildingSinkFactoryWrapper {
     factory: Box<dyn UnfinishedBlockBuildingSinkFactory>,
-    best_local_value: BestTrueValueCell,
+    best_local_value: LastBuiltBlockInfoCell,
     competition_bid_value_source: Arc<dyn BidValueSource + Send + Sync>,
 }
 
@@ -78,14 +78,14 @@ impl UnfinishedBlockBuildingSinkFactoryWrapper {
         backend: BackendType,
         cancellation_token: CancellationToken,
     ) -> Result<Self> {
-        let best_local_value = BestTrueValueCell::default();
+        let last_local_value = LastBuiltBlockInfoCell::default();
         let pusher =
-            BestTrueValuePusher::new(best_local_value.clone(), backend, cancellation_token);
+            BuiltBlockInfoPusher::new(last_local_value.clone(), backend, cancellation_token);
         std::thread::spawn(move || pusher.run_push_task());
         Ok(UnfinishedBlockBuildingSinkFactoryWrapper {
             factory,
             competition_bid_value_source,
-            best_local_value,
+            best_local_value: last_local_value,
         })
     }
 }

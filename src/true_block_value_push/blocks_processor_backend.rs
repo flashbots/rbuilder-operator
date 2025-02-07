@@ -4,7 +4,7 @@ use jsonrpsee::core::client::ClientT;
 use tokio::runtime::Runtime;
 use tracing::error;
 
-use super::best_true_value_pusher::{Backend, BestTrueValue};
+use super::best_true_value_pusher::{Backend, BuiltBlockInfo};
 
 const REPORT_BEST_TRUE_VALUE_METHOD: &str = "flashbots_reportBestTrueValue";
 
@@ -52,7 +52,7 @@ impl Backend for BlocksProcessorBackend {
     fn publish(
         &self,
         connection: &mut Self::Connection,
-        best_true_value: &BestTrueValue,
+        best_true_value: &BuiltBlockInfo,
     ) -> Result<(), Self::BackendError> {
         let params = [best_true_value];
         Ok(self
