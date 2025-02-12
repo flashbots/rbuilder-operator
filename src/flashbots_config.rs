@@ -327,8 +327,8 @@ impl FlashbotsConfig {
             wallet_balance_watcher,
         ));
 
-        // Avoid sending TBV is we are not going to bid.
-        let wrapped_sink_factory = if self.l1_config.dry_run {
+        // Avoid sending TBV is we are not on buildernet
+        let wrapped_sink_factory = if self.key_registration_url.is_none() {
             sink_factory
         } else {
             self.wrap_with_tbv_pusher(

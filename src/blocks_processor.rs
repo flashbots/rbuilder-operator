@@ -177,7 +177,7 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
             committed_bundles.clone(),
             committed_bundles,
             used_share_bundles,
-            submit_block_request.bid_trace(),
+            submit_block_request.bid_trace().clone(),
             builder_name,
             built_block_trace.true_bid_value,
             best_bid_value,
