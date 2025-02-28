@@ -146,7 +146,7 @@ impl<BackendType: Backend> BuiltBlockInfoPusher<BackendType> {
                     let last_local_value = self.last_local_value.read();
                     if last_pushed_value
                         .as_ref()
-                        .map_or(true, |value| !value.is_same_bid_info(&last_local_value))
+                        .is_none_or(|value| !value.is_same_bid_info(&last_local_value))
                     {
                         last_pushed_value = Some(last_local_value.clone());
                         match self.backend.publish(&mut conn, &last_local_value) {
