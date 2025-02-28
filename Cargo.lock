@@ -3226,7 +3226,7 @@ dependencies = [
 [[package]]
 name = "eth-sparse-mpt"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=9928269017a8c59e23042b148434be973b3939a4#9928269017a8c59e23042b148434be973b3939a4"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=d82e9da68b771d3c5d3ec218563d4bac7857f2ce#d82e9da68b771d3c5d3ec218563d4bac7857f2ce"
 dependencies = [
  "alloy-primitives 0.8.21",
  "alloy-rlp",
@@ -5932,7 +5932,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=9928269017a8c59e23042b148434be973b3939a4#9928269017a8c59e23042b148434be973b3939a4"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=d82e9da68b771d3c5d3ec218563d4bac7857f2ce#d82e9da68b771d3c5d3ec218563d4bac7857f2ce"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7842,7 +7842,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=9928269017a8c59e23042b148434be973b3939a4#9928269017a8c59e23042b148434be973b3939a4"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=d82e9da68b771d3c5d3ec218563d4bac7857f2ce#d82e9da68b771d3c5d3ec218563d4bac7857f2ce"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -12401,7 +12401,7 @@ dependencies = [
 [[package]]
 name = "sysperf"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=9928269017a8c59e23042b148434be973b3939a4#9928269017a8c59e23042b148434be973b3939a4"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=d82e9da68b771d3c5d3ec218563d4bac7857f2ce#d82e9da68b771d3c5d3ec218563d4bac7857f2ce"
 dependencies = [
  "alloy-primitives 0.8.21",
  "num_cpus",
@@ -12504,7 +12504,7 @@ checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=9928269017a8c59e23042b148434be973b3939a4#9928269017a8c59e23042b148434be973b3939a4"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=d82e9da68b771d3c5d3ec218563d4bac7857f2ce#d82e9da68b771d3c5d3ec218563d4bac7857f2ce"
 dependencies = [
  "proc-macro2",
  "quote",
