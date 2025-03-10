@@ -32,7 +32,6 @@ jsonrpsee = { version = "0.20.3", features = ["full"] }
 tracing = "0.1.37"
 time = { version = "0.3.36", features = ["macros", "formatting", "parsing"] }
 thiserror = "1.0.64"
-tungstenite = "0.23.0"
 ahash = "0.8.6"
 itertools = "0.11.0"
 rand = "0.8.5"
@@ -62,6 +61,8 @@ metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "43
 
 #rbuilder = {path="./../rbuilder/crates/rbuilder"}
 rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "43d7a9d5a95f44d188b5e8c8eba3053fd08fc8ae"}
+tokio-tungstenite = "0.26.2"
+exponential-backoff = "1.2.0"
 
 [build-dependencies]
 built = { version = "0.7.1", features = ["git2", "chrono"] }

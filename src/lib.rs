@@ -7,4 +7,5 @@ pub mod flashbots_config;
 pub mod flashbots_signer;
 pub mod metrics;
 pub mod signed_http_client;
+pub mod reconnect;
 mod true_block_value_push;
