@@ -412,8 +412,10 @@ impl FlashbotsConfig {
                 }
             };
             tokio::spawn(async move {
-		connector_clone.run_ws_stream(watchdog_sender, cancellation_token).await
-	    });
+                connector_clone
+                    .run_ws_stream(watchdog_sender, cancellation_token)
+                    .await
+            });
             Ok(connector)
         } else {
             error!("No BidValueSource configured, using NullBidValueSource");

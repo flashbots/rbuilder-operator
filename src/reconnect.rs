@@ -3,7 +3,6 @@ use std::{future::Future, time::Duration};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, info_span, warn, Instrument};
 
-
 #[derive(Debug)]
 pub enum RunCommand {
     Reconnect,
@@ -34,7 +33,7 @@ pub async fn run_async_loop_with_reconnect<
         if cancellation_token.is_cancelled() {
             break 'reconnect;
         }
-        let backoff = backoff.clone().unwrap_or_else(|| default_backoff());
+        let backoff = backoff.clone().unwrap_or_else(default_backoff);
         let mut backoff_iter = backoff.iter();
 
         let connection = 'backoff: loop {

@@ -6,10 +6,13 @@ use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use alloy_primitives::utils::format_ether;
-use rbuilder::live_builder::block_output::bid_value_source::interfaces::{BidValueObs, BidValueSource};
-use serde::Deserialize;
 use crate::reconnect::{run_async_loop_with_reconnect, RunCommand};
+use alloy_primitives::utils::format_ether;
+use alloy_primitives::U256;
+use rbuilder::live_builder::block_output::bid_value_source::interfaces::{
+    BidValueObs, BidValueSource,
+};
+use serde::Deserialize;
 use tokio::net::TcpStream;
 use tokio_stream::StreamExt;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -19,7 +22,6 @@ use tokio_tungstenite::{connect_async_with_config, tungstenite::protocol::Messag
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, trace, warn};
-use alloy_primitives::U256;
 
 use crate::metrics::inc_non_0_competition_bids;
 
@@ -44,7 +46,6 @@ pub struct Subscription {
     pub slot_number: u64,
     pub obs: Arc<dyn BidValueObs>,
 }
-
 
 /// Struct that connects to a websocket feed with best bids from the competition.
 /// Allows to subscribe so listen for changes on a particular slot.
@@ -79,14 +80,21 @@ impl BestBidWSConnector {
         watch_dog_sender: flume::Sender<()>,
         cancellation_token: CancellationToken,
     ) {
-	run_async_loop_with_reconnect(
+        run_async_loop_with_reconnect(
             "ws_top_bid_connection",
             || connect(self.connection_request.clone()),
-            |conn| run_command(conn, cancellation_token.clone(), watch_dog_sender.clone(), self.subscriptions.clone()),
+            |conn| {
+                run_command(
+                    conn,
+                    cancellation_token.clone(),
+                    watch_dog_sender.clone(),
+                    self.subscriptions.clone(),
+                )
+            },
             None,
             cancellation_token.clone(),
-    )
-	    .await;
+        )
+        .await;
     }
 }
 
@@ -117,25 +125,25 @@ async fn run_command(
             return RunCommand::Reconnect;
         }
 
-	let next_message = tokio::time::timeout(READ_TIMEOUT, conn.next());
+        let next_message = tokio::time::timeout(READ_TIMEOUT, conn.next());
         let res = match next_message.await {
-	    Ok(res) => res,
-	    Err(err) => {
-		warn!(?err, "Timeout error");
+            Ok(res) => res,
+            Err(err) => {
+                warn!(?err, "Timeout error");
                 return RunCommand::Reconnect;
-	    }
-	};
+            }
+        };
         let message = match res {
             Some(Ok(message)) => message,
             Some(Err(err)) => {
                 warn!(?err, "Error reading WS stream");
                 io_error_count += 1;
                 continue;
-            },
-	    None => {
-		warn!("Connection read stream is closed, reconnecting");
+            }
+            None => {
+                warn!("Connection read stream is closed, reconnecting");
                 return RunCommand::Reconnect;
-	    },
+            }
         };
         let data = match &message {
             Message::Text(msg) => msg.as_bytes(),
@@ -189,7 +197,6 @@ async fn run_command(
     RunCommand::Finish
 }
 
-
 impl BidValueSource for BestBidWSConnector {
     fn subscribe(&self, block_number: u64, slot_number: u64, obs: Arc<dyn BidValueObs>) {
         self.subscriptions.lock().unwrap().push(Subscription {
@@ -206,5 +213,3 @@ impl BidValueSource for BestBidWSConnector {
             .retain(|s| !Arc::ptr_eq(&s.obs, &obs));
     }
 }
-
-
