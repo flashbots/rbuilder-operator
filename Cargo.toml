@@ -57,10 +57,10 @@ hyper = "0.14"
 futures-util = "0.3.31"
 
 
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "ebabead4cc1e06ffcc7c2301d533173be8e81f26"}
+metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "f4fe57cf5cbefbf55f15e48b2d542b2c1f5675ae"}
 
 #rbuilder = {path="./../rbuilder/crates/rbuilder"}
-rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "ebabead4cc1e06ffcc7c2301d533173be8e81f26"}
+rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "f4fe57cf5cbefbf55f15e48b2d542b2c1f5675ae"}
 tokio-tungstenite = "0.26.2"
 exponential-backoff = "1.2.0"
 

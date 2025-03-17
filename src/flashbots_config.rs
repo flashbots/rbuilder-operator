@@ -7,7 +7,10 @@ use http::StatusCode;
 use jsonrpsee::RpcModule;
 use rbuilder::building::builders::parallel_builder::parallel_build_backtest;
 use rbuilder::building::builders::UnfinishedBlockBuildingSinkFactory;
-use rbuilder::building::order_priority::{OrderMaxProfitPriority, OrderMevGasPricePriority};
+use rbuilder::building::order_priority::{
+    OrderLengthThreeMaxProfitPriority, OrderLengthThreeMevGasPricePriority, OrderMaxProfitPriority,
+    OrderMevGasPricePriority, OrderTypePriority,
+};
 use rbuilder::building::Sorting;
 use rbuilder::live_builder::base_config::EnvOrValue;
 use rbuilder::live_builder::block_output::bid_observer::{BidObserver, NullBidObserver};
@@ -190,9 +193,27 @@ impl LiveBuilderConfig for FlashbotsConfig {
                         OrderMaxProfitPriority,
                     >(config, input)
                 }
+                Sorting::TypeMaxProfit => {
+                    rbuilder::building::builders::ordering_builder::backtest_simulate_block::<
+                        P,
+                        OrderTypePriority,
+                    >(config, input)
+                }
+                Sorting::LengthThreeMaxProfit => {
+                    rbuilder::building::builders::ordering_builder::backtest_simulate_block::<
+                        P,
+                        OrderLengthThreeMaxProfitPriority,
+                    >(config, input)
+                }
+                Sorting::LengthThreeMevGasPrice => {
+                    rbuilder::building::builders::ordering_builder::backtest_simulate_block::<
+                        P,
+                        OrderLengthThreeMevGasPricePriority,
+                    >(config, input)
+                }
             },
             SpecificBuilderConfig::ParallelBuilder(config) => {
-                parallel_build_backtest(input, config)
+                parallel_build_backtest::<P>(input, config)
             }
         }
     }
