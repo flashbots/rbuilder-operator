@@ -9,7 +9,7 @@ use rbuilder::{
     mev_boost::submission::SubmitBlockRequest,
     primitives::{
         serialize::{RawBundle, RawShareBundle},
-        Order,
+        Bundle, Order,
     },
     utils::error_storage::store_error_event,
 };
@@ -119,6 +119,13 @@ impl BlocksProcessorClient<HttpClient> {
     }
 }
 
+/// RawBundle::encode_no_blobs but more compatible.
+fn encode_bundle_for_blocks_processor(mut bundle: Bundle) -> RawBundle {
+    // set to 0 when none
+    bundle.block = bundle.block.or(Some(0));
+    RawBundle::encode_no_blobs(bundle.clone())
+}
+
 impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
     pub fn new(client: HttpClientType, consume_built_block_method: &'static str) -> Self {
         Self {
@@ -160,7 +167,7 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
                         total_eth: res.inplace_sim.coinbase_profit,
                         eth_send_to_coinbase: U256::ZERO,
                         total_gas_used: res.inplace_sim.gas_used,
-                        original_bundle: RawBundle::encode_no_blobs(bundle.clone()),
+                        original_bundle: encode_bundle_for_blocks_processor(bundle.clone()),
                     })
                 } else {
                     None
