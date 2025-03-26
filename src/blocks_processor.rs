@@ -208,14 +208,14 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
     fn handle_rpc_error(err: &jsonrpsee::core::Error, request: &ConsumeBuiltBlockRequest) {
         match err {
             jsonrpsee::core::Error::Call(error_object) => {
-                error!(err = ?error_object, "Block processor returned error");
+                error!(err = ?error_object, kind = "error_returned", "Block processor RPC");
                 store_error_event(BLOCK_PROCESSOR_ERROR_CATEGORY, &err.to_string(), request);
             }
             jsonrpsee::core::Error::Transport(_) => {
-                debug!(err = ?err, "Failed to send block processor request");
+                debug!(err = ?err, kind = "transport", "Block processor RPC");
             }
             jsonrpsee::core::Error::ParseError(error) => {
-                error!(err = ?err, "Failed to deserialize block processor response");
+                error!(err = ?err, kind = "deserialize", "Block processor RPC");
                 let error_txt = error.to_string();
                 if !(error_txt.contains("504 Gateway Time-out")
                     || error_txt.contains("502 Bad Gateway"))
@@ -224,7 +224,7 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
                 }
             }
             _ => {
-                error!(err = ?err, "Block processor error");
+                error!(err = ?err, kind = "other", "Block processor RPC");
             }
         }
     }
@@ -314,7 +314,7 @@ impl<HttpClientType: ClientT + Clone + Send + Sync + std::fmt::Debug + 'static> 
                 .await;
             if let Err(err) = block_processor_result {
                 inc_blocks_api_errors();
-                warn!(parent: &parent_span, "Failed to submit block to the blocks api: {}", err);
+                warn!(parent: &parent_span, ?err, "Failed to submit block to the blocks api");
             }
         });
     }
