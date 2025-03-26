@@ -4,21 +4,21 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-reth = { git = "https://github.com/paradigmxyz/reth", tag = "v1.2.2" }
-reth-db = { git = "https://github.com/paradigmxyz/reth", tag = "v1.2.2" }
-reth-payload-builder = { git = "https://github.com/paradigmxyz/reth", tag = "v1.2.2" }
+reth = { git = "https://github.com/paradigmxyz/reth", tag = "v1.3.4" }
+reth-db = { git = "https://github.com/paradigmxyz/reth", tag = "v1.3.4" }
+reth-payload-builder = { git = "https://github.com/paradigmxyz/reth", tag = "v1.3.4" }
 
 
-alloy-primitives = { version = "0.8.15", default-features = false }
-alloy-provider = { version = "0.11.1", features = ["ipc", "pubsub"] }
-alloy-json-rpc = { version = "0.11.1" }
-alloy-transport-http = { version = "0.11.1" }
-alloy-transport = { version = "0.11.1" }
-alloy-rpc-types-beacon = { version = "0.11.1", features = ["ssz"] }
-alloy-signer-local = { version = "0.11.1" }
+alloy-primitives = { version = "0.8.20", default-features = false }
+alloy-provider = { version = "0.12.6", features = ["ipc", "pubsub"] }
+alloy-json-rpc = { version = "0.12.6" }
+alloy-transport-http = { version = "0.12.6" }
+alloy-transport = { version = "0.12.6" }
+alloy-rpc-types-beacon = { version = "0.12.6", features = ["ssz"] }
+alloy-signer-local = { version = "0.12.6" }
 
-alloy-signer = { version = "0.11.1" }
-alloy-rpc-client = { version = "0.11.1" }
+alloy-signer = { version = "0.12.6" }
+alloy-rpc-client = { version = "0.12.6" }
 
 clap = { version = "4.4.3", features = ["derive", "env"] }
 tokio = "1.40.0"
@@ -57,10 +57,10 @@ hyper = "0.14"
 futures-util = "0.3.31"
 
 
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "942f4013a53a2a0fb99d9e82a020df032ea87b2e"}
+metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "acf57ce28144a3d4c816879c9b101bd9defef060"}
 
 #rbuilder = {path="./../rbuilder/crates/rbuilder"}
-rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "942f4013a53a2a0fb99d9e82a020df032ea87b2e"}
+rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "acf57ce28144a3d4c816879c9b101bd9defef060"}
 tokio-tungstenite = "0.26.2"
 exponential-backoff = "1.2.0"
 
