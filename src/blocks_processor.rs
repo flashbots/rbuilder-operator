@@ -1,4 +1,5 @@
 use alloy_primitives::{BlockHash, U256};
+use exponential_backoff::Backoff;
 use jsonrpsee::{
     core::{client::ClientT, traits::ToRpcParams},
     http_client::{HttpClient, HttpClientBuilder},
@@ -17,9 +18,9 @@ use reth::primitives::SealedBlock;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use serde_with::{serde_as, DisplayFromStr};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use time::format_description::well_known;
-use tracing::{debug, error, warn, Span};
+use tracing::{debug, error, trace, warn, Span};
 
 use crate::metrics::inc_blocks_api_errors;
 
@@ -190,19 +191,30 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
             best_bid_value,
         );
         let request = ConsumeBuiltBlockRequestArc::new(params);
-        match self
-            .client
-            .request(self.consume_built_block_method, request.clone())
-            .await
-        {
-            Ok(()) => {}
-            Err(err) => {
-                Self::handle_rpc_error(&err, request.as_ref());
-                return Err(err.into());
+        let backoff = backoff();
+        let mut backoff_iter = backoff.iter();
+        loop {
+            let sleep_time = backoff_iter.next();
+            match self
+                .client
+                .request(self.consume_built_block_method, request.clone())
+                .await
+            {
+                Ok(()) => {
+                    return Ok(());
+                }
+                Err(err) => match sleep_time {
+                    Some(time) => {
+                        trace!(?err, "Block processor returned error, retrying.");
+                        tokio::time::sleep(time).await;
+                    }
+                    None => {
+                        Self::handle_rpc_error(&err, request.as_ref());
+                        return Err(err.into());
+                    }
+                },
             }
         }
-
-        Ok(())
     }
 
     fn handle_rpc_error(err: &jsonrpsee::core::Error, request: &ConsumeBuiltBlockRequest) {
@@ -318,5 +330,35 @@ impl<HttpClientType: ClientT + Clone + Send + Sync + std::fmt::Debug + 'static> 
                 warn!(parent: &parent_span, ?err, "Failed to submit block to the blocks api");
             }
         });
+    }
+}
+
+// backoff is around 1 minute and total number of requests per payload will be 4
+// assuming 200 blocks per slot and if API is down we will max at around 1k of blocks in memory
+fn backoff() -> Backoff {
+    let mut backoff = Backoff::new(3, Duration::from_secs(5), None);
+    backoff.set_factor(2);
+    backoff.set_jitter(0.1);
+    backoff
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backoff_total_time_assert() {
+        let mut requests = 0;
+        let mut total_sleep_time = Duration::default();
+        let backoff = backoff();
+        let backoff_iter = backoff.iter();
+        for duration in backoff_iter {
+            requests += 1;
+            total_sleep_time += duration;
+        }
+        assert_eq!(requests, 4);
+        let total_sleep_time = total_sleep_time.as_secs();
+        dbg!(total_sleep_time);
+        assert!(total_sleep_time > 40 && total_sleep_time < 90);
     }
 }
