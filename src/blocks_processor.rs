@@ -20,7 +20,7 @@ use serde_json::value::RawValue;
 use serde_with::{serde_as, DisplayFromStr};
 use std::{sync::Arc, time::Duration};
 use time::format_description::well_known;
-use tracing::{debug, error, trace, warn, Span};
+use tracing::{error, trace, warn, Span};
 
 use crate::metrics::inc_blocks_api_errors;
 
@@ -225,7 +225,8 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
                 store_error_event(BLOCK_PROCESSOR_ERROR_CATEGORY, &err.to_string(), request);
             }
             jsonrpsee::core::Error::Transport(_) => {
-                debug!(err = ?err, kind = "transport", RPC_ERROR_TEXT);
+                error!(err = ?err, kind = "transport", RPC_ERROR_TEXT);
+                store_error_event(BLOCK_PROCESSOR_ERROR_CATEGORY, &err.to_string(), request);
             }
             jsonrpsee::core::Error::ParseError(error) => {
                 error!(err = ?err, kind = "deserialize", RPC_ERROR_TEXT);
