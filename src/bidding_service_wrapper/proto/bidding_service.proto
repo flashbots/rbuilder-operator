@@ -64,6 +64,7 @@ message NewBlockParams{
     repeated uint64 true_block_value = 3; // Array of 4 uint64
     bool can_add_payout_tx = 4;
     uint64 block_id = 5;
+    uint64 creation_time_us = 6;
 }
 
 message DestroySlotBidderParams {
@@ -110,6 +111,7 @@ message Bid {
     uint64 block_id = 2;
     // Optional implicitly by allowing empty
     repeated uint64 seen_competition_bid = 3; // Array of 4 uint64
+    uint64 trigger_creation_time_us = 4;
 }    
 
 

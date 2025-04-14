@@ -45,9 +45,9 @@ impl UnfinishedBlockBuildingSink for SlotBidderClient {
             .send(BiddingServiceClientCommand::NewBlock(NewBlockParams {
                 block: self.block,
                 slot: self.slot,
-                true_block_value: block_descriptor.true_block_value.as_limbs().to_vec(),
-                can_add_payout_tx: block_descriptor.can_add_payout_tx,
-                block_id: block_descriptor.id.0,
+                true_block_value: block_descriptor.true_block_value().as_limbs().to_vec(),
+                can_add_payout_tx: block_descriptor.can_add_payout_tx(),
+                block_id: block_descriptor.id().0,
             }));
     }
 

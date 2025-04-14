@@ -39,11 +39,11 @@ impl FullUnfinishedBlockBuildingSink for SlotBidderAdapter {
         let true_block_value = block.true_block_value();
         let can_add_payout_tx = block.can_add_payout_tx();
         let block_id = self.block_registry.lock().unwrap().add_block(block);
-        self.bidder.new_block(BlockDescriptor {
+        self.bidder.new_block(BlockDescriptor::new(
             true_block_value,
             can_add_payout_tx,
-            id: block_id,
-        });
+            block_id,
+        ));
     }
 
     fn can_use_suggested_fee_recipient_as_coinbase(&self) -> bool {
