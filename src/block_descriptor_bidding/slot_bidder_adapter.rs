@@ -1,13 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use alloy_primitives::U256;
 use rbuilder::{
     building::builders::{
         block_building_helper::BiddableUnfinishedBlock,
         UnfinishedBlockBuildingSink as FullUnfinishedBlockBuildingSink,
     },
     live_builder::block_output::{
-        bid_value_source::interfaces::BidValueObs,
+        bid_value_source::interfaces::{BidValueObs, CompetitionBid},
         bidding::interfaces::SlotBidder as FullSlotBidder,
     },
 };
@@ -52,7 +51,7 @@ impl FullUnfinishedBlockBuildingSink for SlotBidderAdapter {
 }
 
 impl BidValueObs for SlotBidderAdapter {
-    fn update_new_bid(&self, bid: U256) {
+    fn update_new_bid(&self, bid: CompetitionBid) {
         self.bidder.update_new_bid(bid)
     }
 }

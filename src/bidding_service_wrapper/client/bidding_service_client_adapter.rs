@@ -3,7 +3,7 @@ use rbuilder::{
     live_builder::block_output::bidding::interfaces::{
         BiddingServiceWinControl, LandedBlockInfo as RealLandedBlockInfo,
     },
-    utils::build_info::Version,
+    utils::{build_info::Version, timestamp_us_to_offset_datetime},
 };
 use std::{
     path::PathBuf,
@@ -184,7 +184,8 @@ impl BiddingServiceClientAdapter {
                                     if let Some(bid) = callback.bid {
                                         let payout_tx_value = Self::parse_option_u256(bid.payout_tx_value);
                                         let seen_competition_bid = Self::parse_option_u256(bid.seen_competition_bid);
-                                        create_slot_bidder_data.bid_maker.send_bid(Bid{ block_id: BlockId(bid.block_id), payout_tx_value,seen_competition_bid});
+                                        let trigger_creation_time = bid.trigger_creation_time_us.map(timestamp_us_to_offset_datetime);
+                                        create_slot_bidder_data.bid_maker.send_bid(Bid{block_id:BlockId(bid.block_id),payout_tx_value,seen_competition_bid, trigger_creation_time });
                                     } else if let Some(can_use_suggested_fee_recipient_as_coinbase_change) = callback.can_use_suggested_fee_recipient_as_coinbase_change {
                                         create_slot_bidder_data.can_use_suggested_fee_recipient_as_coinbase.store(can_use_suggested_fee_recipient_as_coinbase_change,std::sync::atomic::Ordering::SeqCst);
                                     }

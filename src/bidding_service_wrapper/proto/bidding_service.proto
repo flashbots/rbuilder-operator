@@ -56,6 +56,7 @@ message UpdateNewBidParams {
     uint64 block = 1;
     uint64 slot = 2;
     repeated uint64 bid = 3; // Array of 4 uint64
+    uint64 creation_time_us = 4;
 }
 
 message NewBlockParams{
@@ -111,7 +112,7 @@ message Bid {
     uint64 block_id = 2;
     // Optional implicitly by allowing empty
     repeated uint64 seen_competition_bid = 3; // Array of 4 uint64
-    uint64 trigger_creation_time_us = 4;
+    optional uint64 trigger_creation_time_us = 4;
 }    
 
 

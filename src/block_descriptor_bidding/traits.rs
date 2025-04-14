@@ -20,6 +20,7 @@ pub struct BlockDescriptor {
     true_block_value: U256,
     can_add_payout_tx: bool,
     id: BlockId,
+    /// For metrics
     creation_time: OffsetDateTime,
 }
 
@@ -30,6 +31,20 @@ impl BlockDescriptor {
             can_add_payout_tx,
             id,
             creation_time: OffsetDateTime::now_utc(),
+        }
+    }
+
+    pub fn new_for_deserialization(
+        true_block_value: U256,
+        can_add_payout_tx: bool,
+        id: BlockId,
+        creation_time: OffsetDateTime,
+    ) -> Self {
+        Self {
+            true_block_value,
+            can_add_payout_tx,
+            id,
+            creation_time,
         }
     }
 
@@ -44,6 +59,10 @@ impl BlockDescriptor {
     pub fn id(&self) -> &BlockId {
         &self.id
     }
+
+    pub fn creation_time(&self) -> OffsetDateTime {
+        self.creation_time
+    }
 }
 /// Simplified version of [rbuilder::live_builder::block_output::bidding::interfaces::Bid]
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -51,6 +70,9 @@ pub struct Bid {
     pub block_id: BlockId,
     pub payout_tx_value: Option<U256>,
     pub seen_competition_bid: Option<U256>,
+    /// When this bid is a reaction so some event (eg: new block, new competition bid) we put here
+    /// the creation time of that event so we can measure our reaction time.
+    pub trigger_creation_time: Option<OffsetDateTime>,
 }
 
 /// Simplified version of [rbuilder::live_builder::block_output::bidding::interfaces::BidMaker]

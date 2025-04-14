@@ -1,7 +1,9 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
-use alloy_primitives::U256;
-use rbuilder::live_builder::block_output::bid_value_source::interfaces::BidValueObs;
+use rbuilder::{
+    live_builder::block_output::bid_value_source::interfaces::{BidValueObs, CompetitionBid},
+    utils::offset_datetime_to_timestamp_us,
+};
 use tokio::sync::mpsc;
 
 use crate::{
@@ -48,6 +50,7 @@ impl UnfinishedBlockBuildingSink for SlotBidderClient {
                 true_block_value: block_descriptor.true_block_value().as_limbs().to_vec(),
                 can_add_payout_tx: block_descriptor.can_add_payout_tx(),
                 block_id: block_descriptor.id().0,
+                creation_time_us: offset_datetime_to_timestamp_us(block_descriptor.creation_time()),
             }));
     }
 
@@ -58,14 +61,15 @@ impl UnfinishedBlockBuildingSink for SlotBidderClient {
 }
 
 impl BidValueObs for SlotBidderClient {
-    fn update_new_bid(&self, bid: U256) {
+    fn update_new_bid(&self, bid: CompetitionBid) {
         let _ = self
             .commands_sender
             .send(BiddingServiceClientCommand::UpdateNewBid(
                 UpdateNewBidParams {
                     block: self.block,
                     slot: self.slot,
-                    bid: bid.as_limbs().to_vec(),
+                    bid: bid.bid().as_limbs().to_vec(),
+                    creation_time_us: offset_datetime_to_timestamp_us(bid.creation_time()),
                 },
             ));
     }
