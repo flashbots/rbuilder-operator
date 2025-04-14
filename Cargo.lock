@@ -421,27 +421,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alloy-node-bindings"
-version = "0.12.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "846c2248472c3a7efa8d9d6c51af5b545a88335af0ed7a851d01debfc3b03395"
-dependencies = [
- "alloy-genesis",
- "alloy-hardforks",
- "alloy-network",
- "alloy-primitives 0.8.23",
- "alloy-signer",
- "alloy-signer-local",
- "k256 0.13.4",
- "rand 0.8.5",
- "serde_json",
- "tempfile",
- "thiserror 2.0.11",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "alloy-primitives"
 version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3352,7 +3331,7 @@ dependencies = [
 [[package]]
 name = "eth-sparse-mpt"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=82d3744af15cb08457525a9af010f8d9983c227b#82d3744af15cb08457525a9af010f8d9983c227b"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5#3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5"
 dependencies = [
  "alloy-primitives 0.8.23",
  "alloy-rlp",
@@ -3423,7 +3402,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2 0.10.8",
- "ssz_rs 0.9.0 (git+https://github.com/ralexstokes/ssz-rs?rev=84ef2b71aa004f6767420badb42c902ad56b8b72)",
+ "ssz_rs",
  "thiserror 1.0.69",
  "tokio",
  "tokio-stream",
@@ -6122,7 +6101,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=82d3744af15cb08457525a9af010f8d9983c227b#82d3744af15cb08457525a9af010f8d9983c227b"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5#3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8073,7 +8052,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=82d3744af15cb08457525a9af010f8d9983c227b#82d3744af15cb08457525a9af010f8d9983c227b"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5#3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -8083,28 +8062,21 @@ dependencies = [
  "alloy-json-rpc 0.12.6",
  "alloy-network",
  "alloy-network-primitives 0.12.6",
- "alloy-node-bindings",
  "alloy-primitives 0.8.23",
  "alloy-provider",
- "alloy-pubsub",
  "alloy-rlp",
  "alloy-rpc-types",
  "alloy-rpc-types-beacon",
  "alloy-rpc-types-engine",
  "alloy-rpc-types-eth 0.12.6",
- "alloy-serde 0.12.6",
  "alloy-signer-local",
- "alloy-transport",
- "alloy-transport-http",
  "async-trait",
- "atoi",
  "beacon-api-client",
  "bigdecimal 0.4.6",
  "built",
  "clap",
  "crossbeam",
  "crossbeam-queue",
- "csv",
  "ctor",
  "dashmap 6.1.0",
  "derivative",
@@ -8117,10 +8089,8 @@ dependencies = [
  "eyre",
  "flate2",
  "flume",
- "foldhash",
  "futures",
  "governor",
- "humantime",
  "integer-encoding",
  "itertools 0.11.0",
  "jsonrpsee 0.20.4",
@@ -8131,7 +8101,6 @@ dependencies = [
  "metrics_macros",
  "mev-share-sse",
  "mockall",
- "once_cell",
  "parking_lot",
  "primitive-types",
  "priority-queue",
@@ -8139,14 +8108,11 @@ dependencies = [
  "quick_cache",
  "rand 0.8.5",
  "rayon",
- "redis",
  "reipc",
  "reqwest 0.12.9",
  "reth",
- "reth-basic-payload-builder",
  "reth-chainspec",
  "reth-db",
- "reth-db-common",
  "reth-errors",
  "reth-evm",
  "reth-evm-ethereum",
@@ -8168,8 +8134,6 @@ dependencies = [
  "sha2 0.10.8",
  "shellexpand",
  "sqlx",
- "ssz_rs 0.9.0 (git+https://github.com/ralexstokes/ssz-rs.git)",
- "ssz_rs_derive 0.9.0 (git+https://github.com/ralexstokes/ssz-rs.git)",
  "sysperf",
  "test_utils",
  "thiserror 1.0.69",
@@ -8180,11 +8144,9 @@ dependencies = [
  "toml 0.8.19",
  "tracing",
  "tracing-subscriber",
- "tungstenite 0.23.0",
  "url",
  "uuid",
  "warp",
- "zip",
 ]
 
 [[package]]
@@ -12494,35 +12456,13 @@ dependencies = [
  "bitvec",
  "serde",
  "sha2 0.9.9",
- "ssz_rs_derive 0.9.0 (git+https://github.com/ralexstokes/ssz-rs?rev=84ef2b71aa004f6767420badb42c902ad56b8b72)",
-]
-
-[[package]]
-name = "ssz_rs"
-version = "0.9.0"
-source = "git+https://github.com/ralexstokes/ssz-rs.git#ec3073e2273b4d0873fcb6df68ff4eff79588e92"
-dependencies = [
- "alloy-primitives 0.8.23",
- "bitvec",
- "serde",
- "sha2 0.9.9",
- "ssz_rs_derive 0.9.0 (git+https://github.com/ralexstokes/ssz-rs.git)",
+ "ssz_rs_derive",
 ]
 
 [[package]]
 name = "ssz_rs_derive"
 version = "0.9.0"
 source = "git+https://github.com/ralexstokes/ssz-rs?rev=84ef2b71aa004f6767420badb42c902ad56b8b72#84ef2b71aa004f6767420badb42c902ad56b8b72"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "ssz_rs_derive"
-version = "0.9.0"
-source = "git+https://github.com/ralexstokes/ssz-rs.git#ec3073e2273b4d0873fcb6df68ff4eff79588e92"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -12784,7 +12724,7 @@ dependencies = [
 [[package]]
 name = "sysperf"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=82d3744af15cb08457525a9af010f8d9983c227b#82d3744af15cb08457525a9af010f8d9983c227b"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5#3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5"
 dependencies = [
  "alloy-primitives 0.8.23",
  "num_cpus",
@@ -12886,7 +12826,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=82d3744af15cb08457525a9af010f8d9983c227b#82d3744af15cb08457525a9af010f8d9983c227b"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5#3a29bbcb8dd40def5a7089b8fe2c9c8d7fd5afd5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -13535,24 +13475,6 @@ dependencies = [
  "sha1",
  "thiserror 1.0.69",
  "url",
- "utf-8",
-]
-
-[[package]]
-name = "tungstenite"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e2e2ce1e47ed2994fd43b04c8f618008d4cabdd5ee34027cf14f9d918edd9c8"
-dependencies = [
- "byteorder",
- "bytes",
- "data-encoding",
- "http 1.1.0",
- "httparse",
- "log",
- "rand 0.8.5",
- "sha1",
- "thiserror 1.0.69",
  "utf-8",
 ]
 
