@@ -17,11 +17,34 @@ pub struct BlockId(pub u64);
 /// Selected information coming from a BlockBuildingHelper.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct BlockDescriptor {
-    pub true_block_value: U256,
-    pub can_add_payout_tx: bool,
-    pub id: BlockId,
+    true_block_value: U256,
+    can_add_payout_tx: bool,
+    id: BlockId,
+    creation_time: OffsetDateTime,
 }
 
+impl BlockDescriptor {
+    pub fn new(true_block_value: U256, can_add_payout_tx: bool, id: BlockId) -> Self {
+        Self {
+            true_block_value,
+            can_add_payout_tx,
+            id,
+            creation_time: OffsetDateTime::now_utc(),
+        }
+    }
+
+    pub fn true_block_value(&self) -> U256 {
+        self.true_block_value
+    }
+
+    pub fn can_add_payout_tx(&self) -> bool {
+        self.can_add_payout_tx
+    }
+
+    pub fn id(&self) -> &BlockId {
+        &self.id
+    }
+}
 /// Simplified version of [rbuilder::live_builder::block_output::bidding::interfaces::Bid]
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Bid {
