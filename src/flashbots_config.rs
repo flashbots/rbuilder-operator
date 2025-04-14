@@ -35,7 +35,6 @@ use rbuilder::{
     },
     utils::build_info::Version,
 };
-use reth::revm::cached::CachedReads;
 use serde::Deserialize;
 use serde_with::serde_as;
 use tokio_util::sync::CancellationToken;
@@ -174,7 +173,7 @@ impl LiveBuilderConfig for FlashbotsConfig {
         &self,
         building_algorithm_name: &str,
         input: BacktestSimulateBlockInput<'_, P>,
-    ) -> eyre::Result<(Block, CachedReads)>
+    ) -> eyre::Result<Block>
     where
         P: StateProviderFactory + Clone + 'static,
     {
