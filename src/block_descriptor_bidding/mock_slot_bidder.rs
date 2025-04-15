@@ -1,6 +1,5 @@
-use alloy_primitives::U256;
 use rbuilder::live_builder::block_output::bid_value_source::interfaces::{
-    BidValueObs, MockBidValueObs,
+    BidValueObs, CompetitionBid, MockBidValueObs,
 };
 
 use super::traits::{
@@ -41,7 +40,7 @@ impl UnfinishedBlockBuildingSink for MockSlotBidder {
 }
 
 impl BidValueObs for MockSlotBidder {
-    fn update_new_bid(&self, bid: U256) {
+    fn update_new_bid(&self, bid: CompetitionBid) {
         self.bid_value_obs.update_new_bid(bid)
     }
 }

@@ -10,7 +10,7 @@ use crate::reconnect::{run_async_loop_with_reconnect, RunCommand};
 use alloy_primitives::utils::format_ether;
 use alloy_primitives::U256;
 use rbuilder::live_builder::block_output::bid_value_source::interfaces::{
-    BidValueObs, BidValueSource,
+    BidValueObs, BidValueSource, CompetitionBid,
 };
 use serde::Deserialize;
 use tokio::net::TcpStream;
@@ -190,7 +190,8 @@ async fn run_command(
             if sub.block_number == bid_value.block_number
                 && sub.slot_number == bid_value.slot_number
             {
-                sub.obs.update_new_bid(bid_value.block_top_bid);
+                sub.obs
+                    .update_new_bid(CompetitionBid::new(bid_value.block_top_bid));
             }
         }
     }

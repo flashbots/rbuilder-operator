@@ -28,6 +28,8 @@ pub struct UpdateNewBidParams {
     /// Array of 4 uint64
     #[prost(uint64, repeated, tag = "3")]
     pub bid: ::prost::alloc::vec::Vec<u64>,
+    #[prost(uint64, tag = "4")]
+    pub creation_time_us: u64,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -43,6 +45,8 @@ pub struct NewBlockParams {
     pub can_add_payout_tx: bool,
     #[prost(uint64, tag = "5")]
     pub block_id: u64,
+    #[prost(uint64, tag = "6")]
+    pub creation_time_us: u64,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -115,6 +119,8 @@ pub struct Bid {
     /// Array of 4 uint64
     #[prost(uint64, repeated, tag = "3")]
     pub seen_competition_bid: ::prost::alloc::vec::Vec<u64>,
+    #[prost(uint64, optional, tag = "4")]
+    pub trigger_creation_time_us: ::core::option::Option<u64>,
 }
 /// Exactly 1 member will be not null.
 /// Since this is not mapped to an enum we must be careful to manually update BiddingServiceClientAdapter.
