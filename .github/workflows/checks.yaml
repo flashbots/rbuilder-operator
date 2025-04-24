@@ -37,7 +37,7 @@ jobs:
           cache-on-failure: true
 
       - name: Run sccache-action
-        uses: mozilla-actions/sccache-action@v0.0.5
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Set sccache env vars
         run: |
