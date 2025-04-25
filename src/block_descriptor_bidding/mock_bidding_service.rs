@@ -1,7 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use ahash::HashMap;
 use mockall::automock;
+use parking_lot::Mutex;
 use rbuilder::live_builder::block_output::bidding::interfaces::{
     BiddingServiceWinControl, LandedBlockInfo, MockBiddingServiceWinControl,
 };
@@ -54,10 +55,7 @@ impl BiddingService for MockBiddingService {
         _cancel: tokio_util::sync::CancellationToken,
     ) -> std::sync::Arc<dyn super::traits::SlotBidder> {
         let id = SlotBidderId { block, slot };
-        self.bid_makers
-            .lock()
-            .unwrap()
-            .insert(id.clone(), bid_maker);
+        self.bid_makers.lock().insert(id.clone(), bid_maker);
         self.bidders.get(&id).unwrap().clone()
     }
 

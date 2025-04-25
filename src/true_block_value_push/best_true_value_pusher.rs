@@ -2,16 +2,13 @@
 
 use alloy_primitives::U256;
 
+use parking_lot::Mutex;
 use rbuilder::utils::{
     reconnect::{run_loop_with_reconnect, RunCommand},
     u256decimal_serde_helper,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    sync::{Arc, Mutex},
-    thread::sleep,
-    time::Duration,
-};
+use std::{sync::Arc, thread::sleep, time::Duration};
 use time::OffsetDateTime;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, trace};
@@ -68,7 +65,7 @@ pub struct LastBuiltBlockInfoCell {
 
 impl LastBuiltBlockInfoCell {
     pub fn update_value_safe(&self, value: BuiltBlockInfo) {
-        let mut best_value = self.data.lock().unwrap();
+        let mut best_value = self.data.lock();
         if value.slot_number < best_value.slot_number {
             // don't update value for the past slot
             return;
@@ -77,7 +74,7 @@ impl LastBuiltBlockInfoCell {
     }
 
     pub fn read(&self) -> BuiltBlockInfo {
-        self.data.lock().unwrap().clone()
+        self.data.lock().clone()
     }
 }
 

@@ -1,6 +1,7 @@
 //! We use FullXXX aliases for the original versions using full block info.
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use rbuilder::live_builder::block_output::bidding::interfaces::{
     BidMaker as FullBidMaker, BiddingService as FullBiddingService, BiddingServiceWinControl,
     LandedBlockInfo, SlotBidder as FullSlotBidder,
