@@ -3,12 +3,13 @@
 //! This module uses websocket connection to get best bid value from the relays.
 //! The best bid for the current block-slot is stored in the `BestBidCell` and can be read at any time.
 use std::ops::DerefMut;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::reconnect::{run_async_loop_with_reconnect, RunCommand};
 use alloy_primitives::utils::format_ether;
 use alloy_primitives::U256;
+use parking_lot::Mutex;
 use rbuilder::live_builder::block_output::bid_value_source::interfaces::{
     BidValueObs, BidValueSource, CompetitionBid,
 };
@@ -186,7 +187,7 @@ async fn run_command(
             "Updated best bid value"
         );
 
-        for sub in subscriptions.lock().unwrap().deref_mut() {
+        for sub in subscriptions.lock().deref_mut() {
             if sub.block_number == bid_value.block_number
                 && sub.slot_number == bid_value.slot_number
             {
@@ -200,7 +201,7 @@ async fn run_command(
 
 impl BidValueSource for BestBidWSConnector {
     fn subscribe(&self, block_number: u64, slot_number: u64, obs: Arc<dyn BidValueObs>) {
-        self.subscriptions.lock().unwrap().push(Subscription {
+        self.subscriptions.lock().push(Subscription {
             block_number,
             slot_number,
             obs,
@@ -210,7 +211,6 @@ impl BidValueSource for BestBidWSConnector {
     fn unsubscribe(&self, obs: Arc<dyn BidValueObs>) {
         self.subscriptions
             .lock()
-            .unwrap()
             .retain(|s| !Arc::ptr_eq(&s.obs, &obs));
     }
 }

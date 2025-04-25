@@ -1,5 +1,6 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use rbuilder::{
     building::builders::{
         block_building_helper::BiddableUnfinishedBlock,
@@ -37,7 +38,7 @@ impl FullUnfinishedBlockBuildingSink for SlotBidderAdapter {
     fn new_block(&self, block: BiddableUnfinishedBlock) {
         let true_block_value = block.true_block_value();
         let can_add_payout_tx = block.can_add_payout_tx();
-        let block_id = self.block_registry.lock().unwrap().add_block(block);
+        let block_id = self.block_registry.lock().add_block(block);
         self.bidder.new_block(BlockDescriptor::new(
             true_block_value,
             can_add_payout_tx,

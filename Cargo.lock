@@ -8564,6 +8564,7 @@ dependencies = [
  "lazy_static",
  "metrics_macros",
  "mockall",
+ "parking_lot",
  "prometheus",
  "prost",
  "rand 0.8.5",

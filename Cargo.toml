@@ -55,6 +55,7 @@ url = "2.5.2"
 http = "0.2.9"
 hyper = "0.14"
 futures-util = "0.3.31"
+parking_lot = { version = "0.12.3" }
 
 #rbuilder = {path="./../rbuilder/crates/rbuilder"}
 rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "dd6cd6d8834e7a8c3b3f70f45053c86d6399b7d1"}
