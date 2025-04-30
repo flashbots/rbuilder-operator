@@ -22,9 +22,9 @@ pub struct BuiltBlockInfo {
     /// Best true value of submitted block (has subtracted the payout tx cost)
     #[serde(with = "u256decimal_serde_helper")]
     pub best_true_value: U256,
-    /// Best bid seen on the relay at the moment of choosing the bid for our block
+    /// Bid we made to the relay.
     #[serde(with = "u256decimal_serde_helper")]
-    pub best_relay_value: U256,
+    pub bid: U256,
     pub builder: String,
     pub slot_end_timestamp: u64,
 }
@@ -34,7 +34,8 @@ impl BuiltBlockInfo {
         block_number: u64,
         slot_number: u64,
         best_true_value: U256,
-        best_relay_value: U256,
+        bid: U256,
+        builder: String,
         slot_end_timestamp: u64,
     ) -> Self {
         BuiltBlockInfo {
@@ -42,9 +43,8 @@ impl BuiltBlockInfo {
             block_number,
             slot_number,
             best_true_value,
-            best_relay_value,
-            // @Todo real builder name
-            builder: String::from("tmp"),
+            bid,
+            builder,
             slot_end_timestamp,
         }
     }
@@ -54,7 +54,7 @@ impl BuiltBlockInfo {
         self.block_number == other.block_number
             && self.slot_number == other.slot_number
             && self.best_true_value == other.best_true_value
-            && self.best_relay_value == other.best_relay_value
+            && self.bid == other.bid
     }
 }
 

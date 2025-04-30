@@ -6,7 +6,7 @@ use jsonrpsee::{
 };
 use rbuilder::{
     building::BuiltBlockTrace,
-    live_builder::block_output::bid_observer::BidObserver,
+    live_builder::{block_output::bid_observer::BidObserver, payload_events::MevBoostSlotData},
     mev_boost::submission::SubmitBlockRequest,
     primitives::{
         serialize::{RawBundle, RawShareBundle},
@@ -308,14 +308,18 @@ impl<HttpClientType: ClientT + Clone + Send + Sync + std::fmt::Debug + 'static> 
 {
     fn block_submitted(
         &self,
-        sealed_block: SealedBlock,
-        submit_block_request: SubmitBlockRequest,
-        built_block_trace: BuiltBlockTrace,
+        _slot_data: &MevBoostSlotData,
+        sealed_block: &SealedBlock,
+        submit_block_request: &SubmitBlockRequest,
+        built_block_trace: &BuiltBlockTrace,
         builder_name: String,
         best_bid_value: U256,
     ) {
         let client = self.client.clone();
         let parent_span = Span::current();
+        let sealed_block = sealed_block.clone();
+        let submit_block_request = submit_block_request.clone();
+        let built_block_trace = built_block_trace.clone();
         tokio::spawn(async move {
             let block_processor_result = client
                 .submit_built_block(

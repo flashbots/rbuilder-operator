@@ -13,7 +13,8 @@ use rbuilder::building::order_priority::{
 };
 use rbuilder::building::Sorting;
 use rbuilder::live_builder::base_config::EnvOrValue;
-use rbuilder::live_builder::block_output::bid_observer::{BidObserver, NullBidObserver};
+use rbuilder::live_builder::block_output::bid_observer::BidObserver;
+use rbuilder::live_builder::block_output::bid_observer_multiplexer::BidObserverMultiplexer;
 use rbuilder::live_builder::block_output::bid_value_source::interfaces::BidValueSource;
 use rbuilder::live_builder::block_output::bid_value_source::null_bid_value_source::NullBidValueSource;
 use rbuilder::live_builder::block_output::bidding::interfaces::{
@@ -49,7 +50,7 @@ use crate::blocks_processor::{
     SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD,
 };
 use crate::build_info::rbuilder_version;
-use crate::true_block_value_push::unfinished_block_building_sink_factory_wrapper::UnfinishedBlockBuildingSinkFactoryWrapper;
+use crate::true_block_value_push::best_true_value_observer::BestTrueValueObserver;
 
 use clickhouse::Client;
 use std::sync::Arc;
@@ -282,26 +283,26 @@ impl FlashbotsConfig {
     fn create_block_processor_client(
         &self,
         block_processor_key: Option<PrivateKeySigner>,
-    ) -> eyre::Result<Box<dyn BidObserver + Send + Sync>> {
-        let bid_observer: Box<dyn BidObserver + Send + Sync> = if let Some(url) =
-            &self.blocks_processor_url
-        {
-            if let Some(block_processor_key) = block_processor_key {
-                let client = crate::signed_http_client::create_client(url, block_processor_key)?;
-                let block_processor =
-                    BlocksProcessorClient::new(client, SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD);
-                Box::new(BlocksProcessorClientBidObserver::new(block_processor))
-            } else {
-                let client = BlocksProcessorClient::try_from(url)?;
-                Box::new(BlocksProcessorClientBidObserver::new(client))
-            }
+    ) -> eyre::Result<Option<Box<dyn BidObserver + Send + Sync>>> {
+        if let Some(url) = &self.blocks_processor_url {
+            let bid_observer: Box<dyn BidObserver + Send + Sync> =
+                if let Some(block_processor_key) = block_processor_key {
+                    let client =
+                        crate::signed_http_client::create_client(url, block_processor_key)?;
+                    let block_processor =
+                        BlocksProcessorClient::new(client, SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD);
+                    Box::new(BlocksProcessorClientBidObserver::new(block_processor))
+                } else {
+                    let client = BlocksProcessorClient::try_from(url)?;
+                    Box::new(BlocksProcessorClientBidObserver::new(client))
+                };
+            Ok(Some(bid_observer))
         } else {
             if block_processor_key.is_some() {
                 return Self::bail_blocks_processor_url_not_set();
             }
-            Box::new(NullBidObserver {})
-        };
-        Ok(bid_observer)
+            Ok(None)
+        }
     }
 
     fn bail_blocks_processor_url_not_set<T>() -> Result<T, eyre::Report> {
@@ -333,8 +334,10 @@ impl FlashbotsConfig {
         } else {
             None
         };
-        // RelaySubmitSinkFactory
-        let bid_observer = self.create_block_processor_client(block_processor_key.clone())?;
+
+        let bid_observer =
+            self.create_bid_observer(block_processor_key.clone(), &cancellation_token)?;
+
         let (sink_sealed_factory, slot_info_provider) = self
             .l1_config
             .create_relays_sealed_sink_factory(self.base_config.chain_spec()?, bid_observer)?;
@@ -358,46 +361,50 @@ impl FlashbotsConfig {
             wallet_balance_watcher,
         ));
 
-        // Avoid sending TBV is we are not on buildernet
-        let wrapped_sink_factory = if self.key_registration_url.is_none() {
-            sink_factory
-        } else {
-            self.wrap_with_tbv_pusher(
-                &cancellation_token,
-                &bid_value_source,
-                block_processor_key,
-                sink_factory,
-            )?
-        };
-
         Ok((
-            wrapped_sink_factory,
+            sink_factory,
             slot_info_provider,
             bidding_service_win_control,
         ))
     }
 
-    /// Wraps the factory with one that sends a to TBV stream to our infra.
-    /// block_processor_key == Some -> We use signed block processor API.
-    /// block_processor_key == None -> If Some(tbv_push_redis) -> We send directly to a redis channel.
-    fn wrap_with_tbv_pusher(
+    /// Depending on the cfg add a BlocksProcessorClientBidObserver and/or a true value pusher.
+    fn create_bid_observer(
         &self,
-        cancellation_token: &CancellationToken,
-        bid_value_source: &Arc<dyn BidValueSource + Send + Sync>,
         block_processor_key: Option<PrivateKeySigner>,
-        factory: Box<dyn UnfinishedBlockBuildingSinkFactory>,
-    ) -> eyre::Result<Box<dyn UnfinishedBlockBuildingSinkFactory>> {
+        cancellation_token: &CancellationToken,
+    ) -> eyre::Result<Box<dyn BidObserver + Send + Sync>> {
+        let mut bid_observer_multiplexer = BidObserverMultiplexer::default();
+        if let Some(bid_observer) =
+            self.create_block_processor_client(block_processor_key.clone())?
+        {
+            bid_observer_multiplexer.push(bid_observer);
+        }
+        if let Some(bid_observer) =
+            self.create_tbv_pusher(block_processor_key, cancellation_token)?
+        {
+            bid_observer_multiplexer.push(bid_observer);
+        }
+        Ok(Box::new(bid_observer_multiplexer))
+    }
+
+    fn create_tbv_pusher(
+        &self,
+        block_processor_key: Option<PrivateKeySigner>,
+        cancellation_token: &CancellationToken,
+    ) -> eyre::Result<Option<Box<dyn BidObserver + Send + Sync>>> {
+        // Avoid sending TBV is we are not on buildernet
+        if self.key_registration_url.is_none() {
+            return Ok(None);
+        }
+
         if let Some(block_processor_key) = block_processor_key {
             if let Some(blocks_processor_url) = &self.blocks_processor_url {
-                Ok(Box::new(
-                    UnfinishedBlockBuildingSinkFactoryWrapper::new_block_processor(
-                        factory,
-                        bid_value_source.clone(),
-                        blocks_processor_url.clone(),
-                        block_processor_key,
-                        cancellation_token.clone(),
-                    )?,
-                ))
+                Ok(Some(Box::new(BestTrueValueObserver::new_block_processor(
+                    blocks_processor_url.clone(),
+                    block_processor_key,
+                    cancellation_token.clone(),
+                )?)))
             } else {
                 Self::bail_blocks_processor_url_not_set()
             }
@@ -408,17 +415,13 @@ impl FlashbotsConfig {
                 .ok_or(eyre::Report::msg("Missing tbv_push_redis_url"))?
                 .value()
                 .context("tbv_push_redis_url")?;
-            Ok(Box::new(
-                UnfinishedBlockBuildingSinkFactoryWrapper::new_redis(
-                    factory,
-                    bid_value_source.clone(),
-                    tbv_push_redis_url_value,
-                    cfg.channel.clone(),
-                    cancellation_token.clone(),
-                )?,
-            ))
+            Ok(Some(Box::new(BestTrueValueObserver::new_redis(
+                tbv_push_redis_url_value,
+                cfg.channel.clone(),
+                cancellation_token.clone(),
+            )?)))
         } else {
-            Ok(factory)
+            Ok(None)
         }
     }
 
