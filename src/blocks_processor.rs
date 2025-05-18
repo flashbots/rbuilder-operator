@@ -164,10 +164,10 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
             .filter_map(|res| {
                 if let Order::Bundle(bundle) = &res.order {
                     Some(UsedBundle {
-                        mev_gas_price: res.inplace_sim.mev_gas_price,
-                        total_eth: res.inplace_sim.coinbase_profit,
+                        mev_gas_price: res.inplace_sim.full_profit_info().mev_gas_price(),
+                        total_eth: res.inplace_sim.full_profit_info().coinbase_profit(),
                         eth_send_to_coinbase: U256::ZERO,
-                        total_gas_used: res.inplace_sim.gas_used,
+                        total_gas_used: res.inplace_sim.gas_used(),
                         original_bundle: encode_bundle_for_blocks_processor(bundle.clone()),
                     })
                 } else {
@@ -269,7 +269,7 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
                                 }
                             })
                             .collect()
-                    } else if exec_result.txs.is_empty() {
+                    } else if exec_result.tx_infos.is_empty() {
                         // non merged empty execution sbundle
                         vec![]
                     } else {

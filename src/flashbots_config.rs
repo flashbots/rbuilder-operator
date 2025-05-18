@@ -7,11 +7,7 @@ use http::StatusCode;
 use jsonrpsee::RpcModule;
 use rbuilder::building::builders::parallel_builder::parallel_build_backtest;
 use rbuilder::building::builders::UnfinishedBlockBuildingSinkFactory;
-use rbuilder::building::order_priority::{
-    OrderLengthThreeMaxProfitPriority, OrderLengthThreeMevGasPricePriority, OrderMaxProfitPriority,
-    OrderMevGasPricePriority, OrderTypePriority,
-};
-use rbuilder::building::Sorting;
+use rbuilder::building::order_priority::{FullProfitInfoGetter, NonMempoolProfitInfoGetter};
 use rbuilder::live_builder::base_config::EnvOrValue;
 use rbuilder::live_builder::block_output::bid_observer::BidObserver;
 use rbuilder::live_builder::block_output::bid_observer_multiplexer::BidObserverMultiplexer;
@@ -23,7 +19,8 @@ use rbuilder::live_builder::block_output::bidding::interfaces::{
 use rbuilder::live_builder::block_output::bidding::wallet_balance_watcher::WalletBalanceWatcher;
 use rbuilder::live_builder::block_output::block_sealing_bidder_factory::BlockSealingBidderFactory;
 use rbuilder::live_builder::config::{
-    create_builders, BuilderConfig, SpecificBuilderConfig, WALLET_INIT_HISTORY_SIZE,
+    build_backtest_block_ordering_builder, create_builders, BuilderConfig, SpecificBuilderConfig,
+    WALLET_INIT_HISTORY_SIZE,
 };
 use rbuilder::live_builder::watchdog::spawn_watchdog_thread;
 use rbuilder::primitives::mev_boost::MevBoostRelaySlotInfoProvider;
@@ -180,38 +177,15 @@ impl LiveBuilderConfig for FlashbotsConfig {
     {
         let builder_cfg = self.builder(building_algorithm_name)?;
         match builder_cfg.builder {
-            SpecificBuilderConfig::OrderingBuilder(config) => match config.sorting {
-                Sorting::MevGasPrice => {
-                    rbuilder::building::builders::ordering_builder::backtest_simulate_block::<
-                        P,
-                        OrderMevGasPricePriority,
-                    >(config, input)
+            SpecificBuilderConfig::OrderingBuilder(config) => {
+                if config.ignore_mempool_profit_on_bundles {
+                    build_backtest_block_ordering_builder::<P, NonMempoolProfitInfoGetter>(
+                        config, input,
+                    )
+                } else {
+                    build_backtest_block_ordering_builder::<P, FullProfitInfoGetter>(config, input)
                 }
-                Sorting::MaxProfit => {
-                    rbuilder::building::builders::ordering_builder::backtest_simulate_block::<
-                        P,
-                        OrderMaxProfitPriority,
-                    >(config, input)
-                }
-                Sorting::TypeMaxProfit => {
-                    rbuilder::building::builders::ordering_builder::backtest_simulate_block::<
-                        P,
-                        OrderTypePriority,
-                    >(config, input)
-                }
-                Sorting::LengthThreeMaxProfit => {
-                    rbuilder::building::builders::ordering_builder::backtest_simulate_block::<
-                        P,
-                        OrderLengthThreeMaxProfitPriority,
-                    >(config, input)
-                }
-                Sorting::LengthThreeMevGasPrice => {
-                    rbuilder::building::builders::ordering_builder::backtest_simulate_block::<
-                        P,
-                        OrderLengthThreeMevGasPricePriority,
-                    >(config, input)
-                }
-            },
+            }
             SpecificBuilderConfig::ParallelBuilder(config) => {
                 parallel_build_backtest::<P>(input, config)
             }
