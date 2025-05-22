@@ -15,6 +15,7 @@ pub fn real2rpc_landed_block_info(l: &RealLandedBlockInfo) -> RPCLandedBlockInfo
     }
 }
 
+#[allow(clippy::result_large_err)]
 pub fn rpc2real_landed_block_info(l: &RPCLandedBlockInfo) -> Result<RealLandedBlockInfo, Status> {
     Ok(RealLandedBlockInfo {
         block_number: l.block_number,
