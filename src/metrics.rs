@@ -17,6 +17,11 @@ register_metrics! {
     )
     .unwrap();
 
+    pub static TBV_PUSH_ERRORS: IntCounter = IntCounter::new(
+        "tbv_push_errors", "counter of times we failed to publish our last true block value",
+    )
+    .unwrap();
+
     pub static NON_0_COMPETITION_BIDS: IntCounter = IntCounter::new(
         "non_0_competition_bids",
         "Counter of non 0 bids seen on SCP stream"
@@ -50,6 +55,10 @@ pub fn inc_blocks_api_errors() {
 
 pub fn inc_non_0_competition_bids() {
     NON_0_COMPETITION_BIDS.inc();
+}
+
+pub fn inc_tbv_push_errors() {
+    TBV_PUSH_ERRORS.inc();
 }
 
 pub(super) fn set_bidding_service_version(version: Version) {
