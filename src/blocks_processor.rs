@@ -22,7 +22,7 @@ use std::{sync::Arc, time::Duration};
 use time::format_description::well_known;
 use tracing::{error, trace, warn, Span};
 
-use crate::metrics::inc_blocks_api_errors;
+use crate::metrics::inc_submit_block_errors;
 
 const BLOCK_PROCESSOR_ERROR_CATEGORY: &str = "block_processor";
 const DEFAULT_BLOCK_CONSUME_BUILT_BLOCK_METHOD: &str = "block_consumeBuiltBlockV2";
@@ -331,7 +331,7 @@ impl<HttpClientType: ClientT + Clone + Send + Sync + std::fmt::Debug + 'static> 
                 )
                 .await;
             if let Err(err) = block_processor_result {
-                inc_blocks_api_errors();
+                inc_submit_block_errors();
                 warn!(parent: &parent_span, ?err, "Failed to submit block to the blocks api");
             }
         });

@@ -13,7 +13,7 @@ use time::OffsetDateTime;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, trace};
 
-use crate::metrics::inc_tbv_push_errors;
+use crate::metrics::inc_publish_tbv_errors;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -154,7 +154,9 @@ impl<BackendType: Backend> BuiltBlockInfoPusher<BackendType> {
                             }
                             Err(err) => {
                                 error!(?err, "Failed to publish last true value bid");
-                                inc_tbv_push_errors();
+                                // inc_publish_tbv_errors is supposed to be called for block_processor errors but I added the metric here so
+                                // it logs for al backends.
+                                inc_publish_tbv_errors();
                                 io_errors += 1;
                             }
                         }
