@@ -13,12 +13,7 @@ use time::Duration;
 register_metrics! {
     pub static BLOCK_API_ERRORS: IntCounterVec = IntCounterVec::new(
         Opts::new("block_api_errors", "counter of the block processor errors"),
-        &[]
-    )
-    .unwrap();
-
-    pub static TBV_PUSH_ERRORS: IntCounter = IntCounter::new(
-        "tbv_push_errors", "counter of times we failed to publish our last true block value",
+        &["api_name"]
     )
     .unwrap();
 
@@ -49,16 +44,16 @@ pub fn add_trigger_to_bid_round_trip_time(duration: Duration) {
         .observe(duration.as_seconds_f64() * 1_000_000.0);
 }
 
-pub fn inc_blocks_api_errors() {
-    BLOCK_API_ERRORS.with_label_values(&[]).inc()
+pub fn inc_submit_block_errors() {
+    BLOCK_API_ERRORS.with_label_values(&["submit_block"]).inc()
+}
+
+pub fn inc_publish_tbv_errors() {
+    BLOCK_API_ERRORS.with_label_values(&["publish_tbv"]).inc()
 }
 
 pub fn inc_non_0_competition_bids() {
     NON_0_COMPETITION_BIDS.inc();
-}
-
-pub fn inc_tbv_push_errors() {
-    TBV_PUSH_ERRORS.inc();
 }
 
 pub(super) fn set_bidding_service_version(version: Version) {
