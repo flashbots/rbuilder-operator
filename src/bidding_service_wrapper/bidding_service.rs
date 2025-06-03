@@ -22,39 +22,33 @@ pub struct MustWinBlockParams {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateNewBidParams {
     #[prost(uint64, tag = "1")]
-    pub block: u64,
-    #[prost(uint64, tag = "2")]
-    pub slot: u64,
+    pub session_id: u64,
     /// Array of 4 uint64
-    #[prost(uint64, repeated, tag = "3")]
+    #[prost(uint64, repeated, tag = "2")]
     pub bid: ::prost::alloc::vec::Vec<u64>,
-    #[prost(uint64, tag = "4")]
+    #[prost(uint64, tag = "3")]
     pub creation_time_us: u64,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NewBlockParams {
     #[prost(uint64, tag = "1")]
-    pub block: u64,
-    #[prost(uint64, tag = "2")]
-    pub slot: u64,
+    pub session_id: u64,
     /// Array of 4 uint64
-    #[prost(uint64, repeated, tag = "3")]
+    #[prost(uint64, repeated, tag = "2")]
     pub true_block_value: ::prost::alloc::vec::Vec<u64>,
-    #[prost(bool, tag = "4")]
+    #[prost(bool, tag = "3")]
     pub can_add_payout_tx: bool,
-    #[prost(uint64, tag = "5")]
+    #[prost(uint64, tag = "4")]
     pub block_id: u64,
-    #[prost(uint64, tag = "6")]
+    #[prost(uint64, tag = "5")]
     pub creation_time_us: u64,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DestroySlotBidderParams {
     #[prost(uint64, tag = "1")]
-    pub block: u64,
-    #[prost(uint64, tag = "2")]
-    pub slot: u64,
+    pub session_id: u64,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -63,17 +57,12 @@ pub struct CreateSlotBidderParams {
     pub block: u64,
     #[prost(uint64, tag = "2")]
     pub slot: u64,
+    /// Id identifying the session. Used in all following calls.
+    #[prost(uint64, tag = "3")]
+    pub session_id: u64,
     /// unix ts
-    #[prost(int64, tag = "3")]
+    #[prost(int64, tag = "4")]
     pub slot_timestamp: i64,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CreateBidsStreamParams {
-    #[prost(uint64, tag = "1")]
-    pub block: u64,
-    #[prost(uint64, tag = "2")]
-    pub slot: u64,
 }
 /// Info about a onchain block from reth.
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -97,12 +86,6 @@ pub struct LandedBlocksParams {
     /// Added field name
     #[prost(message, repeated, tag = "1")]
     pub landed_block_info: ::prost::alloc::vec::Vec<LandedBlockInfo>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct TestResponse {
-    #[prost(uint32, tag = "1")]
-    pub status: u32,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

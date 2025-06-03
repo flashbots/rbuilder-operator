@@ -53,39 +53,31 @@ message MustWinBlockParams {
 }
 
 message UpdateNewBidParams {
-    uint64 block = 1;
-    uint64 slot = 2;
-    repeated uint64 bid = 3; // Array of 4 uint64
-    uint64 creation_time_us = 4;
+    uint64 session_id = 1;
+    repeated uint64 bid = 2; // Array of 4 uint64
+    uint64 creation_time_us = 3;
 }
 
 message NewBlockParams{
-    uint64 block = 1;
-    uint64 slot = 2;
-    repeated uint64 true_block_value = 3; // Array of 4 uint64
-    bool can_add_payout_tx = 4;
-    uint64 block_id = 5;
-    uint64 creation_time_us = 6;
+    uint64 session_id = 1;
+    repeated uint64 true_block_value = 2; // Array of 4 uint64
+    bool can_add_payout_tx = 3;
+    uint64 block_id = 4;
+    uint64 creation_time_us = 5;
 }
 
 message DestroySlotBidderParams {
-    uint64 block = 1;
-    uint64 slot = 2;
+    uint64 session_id = 1;
 }
 
 message CreateSlotBidderParams {
     uint64 block = 1;
     uint64 slot = 2;
+    // Id identifying the session. Used in all following calls.
+    uint64 session_id = 3;
     // unix ts
-    int64 slot_timestamp = 3;
+    int64 slot_timestamp = 4;
 }
-
-message CreateBidsStreamParams {
-    uint64 block = 1;
-    uint64 slot = 2;
-}
-
-
 
 
 // Info about a onchain block from reth.
@@ -100,10 +92,6 @@ message LandedBlockInfo {
 
 message LandedBlocksParams {
     repeated LandedBlockInfo landed_block_info = 1; // Added field name
-}
-
-message TestResponse {
-    uint32 status = 1;
 }
 
 message Bid {

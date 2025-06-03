@@ -11,8 +11,4 @@ pub mod mock_slot_bidder;
 mod slot_bidder_adapter;
 pub mod traits;
 
-#[derive(Debug, Eq, Hash, PartialEq, Clone)]
-pub struct SlotBidderId {
-    pub block: u64,
-    pub slot: u64,
-}
+pub type SlotBidderId = u64;
