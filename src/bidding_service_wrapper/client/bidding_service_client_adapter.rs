@@ -54,6 +54,7 @@ pub enum BiddingServiceClientCommand {
 pub struct BiddingServiceClientAdapter {
     commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
     win_control: Arc<dyn BiddingServiceWinControl>,
+    last_session_id: u64,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -81,7 +82,13 @@ impl BiddingServiceClientAdapter {
         Ok(Self {
             commands_sender,
             win_control,
+            last_session_id: 0,
         })
+    }
+
+    fn new_session_id(&mut self) -> u64 {
+        self.last_session_id += 1;
+        self.last_session_id
     }
 
     async fn init_sender_task(
@@ -227,7 +234,7 @@ impl BiddingService for BiddingServiceClientAdapter {
     ) -> Arc<dyn SlotBidder> {
         // This default will be immediately changed by a callback.
         let can_use_suggested_fee_recipient_as_coinbase = Arc::new(AtomicBool::new(false));
-
+        let session_id = self.new_session_id();
         let _ = self
             .commands_sender
             .send(BiddingServiceClientCommand::CreateSlotBidder(
@@ -235,6 +242,7 @@ impl BiddingService for BiddingServiceClientAdapter {
                     params: CreateSlotBidderParams {
                         block,
                         slot,
+                        session_id,
                         slot_timestamp: slot_timestamp.unix_timestamp(),
                     },
                     bid_maker,
@@ -244,8 +252,7 @@ impl BiddingService for BiddingServiceClientAdapter {
                 },
             ));
         Arc::new(SlotBidderClient::new(
-            block,
-            slot,
+            session_id,
             self.commands_sender.clone(),
             can_use_suggested_fee_recipient_as_coinbase,
         ))

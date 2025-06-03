@@ -26,6 +26,7 @@ pub struct MockBiddingService {
     pub bidders: HashMap<SlotBidderId, Arc<MockSlotBidder>>,
     pub bid_makers:
         Arc<Mutex<HashMap<SlotBidderId, Box<dyn super::traits::BidMaker + Send + Sync>>>>,
+    pub last_session_id: u64,
 }
 
 impl Default for MockBiddingService {
@@ -41,21 +42,27 @@ impl MockBiddingService {
             mock_bidding_service_win_control: Arc::new(MockBiddingServiceWinControl::new()),
             bidders: Default::default(),
             bid_makers: Default::default(),
+            last_session_id: 0,
         }
+    }
+
+    fn new_session_id(&mut self) -> u64 {
+        self.last_session_id += 1;
+        self.last_session_id
     }
 }
 
 impl BiddingService for MockBiddingService {
     fn create_slot_bidder(
         &mut self,
-        block: u64,
-        slot: u64,
+        _block: u64,
+        _slot: u64,
         _slot_timestamp: time::OffsetDateTime,
         bid_maker: Box<dyn super::traits::BidMaker + Send + Sync>,
         _cancel: tokio_util::sync::CancellationToken,
     ) -> std::sync::Arc<dyn super::traits::SlotBidder> {
-        let id = SlotBidderId { block, slot };
-        self.bid_makers.lock().insert(id.clone(), bid_maker);
+        let id = self.new_session_id();
+        self.bid_makers.lock().insert(id, bid_maker);
         self.bidders.get(&id).unwrap().clone()
     }
 

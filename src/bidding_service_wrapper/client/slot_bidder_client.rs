@@ -18,24 +18,21 @@ use super::bidding_service_client_adapter::BiddingServiceClientCommand;
 /// BidMaker is wrapped with ... that contains a poling task that makes the bids.
 #[derive(Debug)]
 pub struct SlotBidderClient {
-    block: u64,
-    slot: u64,
+    session_id: u64,
     commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
     can_use_suggested_fee_recipient_as_coinbase: Arc<AtomicBool>,
 }
 
 impl SlotBidderClient {
     pub fn new(
-        block: u64,
-        slot: u64,
+        session_id: u64,
         commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
         can_use_suggested_fee_recipient_as_coinbase: Arc<AtomicBool>,
     ) -> Self {
         SlotBidderClient {
             commands_sender,
-            block,
-            slot,
             can_use_suggested_fee_recipient_as_coinbase,
+            session_id,
         }
     }
 }
@@ -45,8 +42,7 @@ impl UnfinishedBlockBuildingSink for SlotBidderClient {
         let _ = self
             .commands_sender
             .send(BiddingServiceClientCommand::NewBlock(NewBlockParams {
-                block: self.block,
-                slot: self.slot,
+                session_id: self.session_id,
                 true_block_value: block_descriptor.true_block_value().as_limbs().to_vec(),
                 can_add_payout_tx: block_descriptor.can_add_payout_tx(),
                 block_id: block_descriptor.id().0,
@@ -66,8 +62,7 @@ impl BidValueObs for SlotBidderClient {
             .commands_sender
             .send(BiddingServiceClientCommand::UpdateNewBid(
                 UpdateNewBidParams {
-                    block: self.block,
-                    slot: self.slot,
+                    session_id: self.session_id,
                     bid: bid.bid().as_limbs().to_vec(),
                     creation_time_us: offset_datetime_to_timestamp_us(bid.creation_time()),
                 },
@@ -83,8 +78,7 @@ impl Drop for SlotBidderClient {
             .commands_sender
             .send(BiddingServiceClientCommand::DestroySlotBidder(
                 DestroySlotBidderParams {
-                    block: self.block,
-                    slot: self.slot,
+                    session_id: self.session_id,
                 },
             ));
     }
