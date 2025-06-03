@@ -7,7 +7,7 @@ use rbuilder::live_builder::block_output::bidding::interfaces::{
     BiddingServiceWinControl, LandedBlockInfo, MockBiddingServiceWinControl,
 };
 
-use super::{mock_slot_bidder::MockSlotBidder, traits::BiddingService, SlotBidderId};
+use super::{mock_slot_bidder::MockSlotBidder, traits::BiddingService};
 
 #[automock]
 pub trait PartialBiddingService {
@@ -15,18 +15,27 @@ pub trait PartialBiddingService {
     fn update_failed_reading_new_landed_blocks(&mut self);
 }
 
+/// Slot + block to use on maps
+#[derive(Debug, Eq, Hash, PartialEq, Clone)]
+pub struct SlotAndBlock {
+    pub block: u64,
+    pub slot: u64,
+}
+
 /// Custom mock for BiddingService.
 /// Usage:
 /// Create a MockBiddingService via new.
-///
+/// Fill all the internal fields to make MockBiddingService return what you need.
 #[derive(Debug)]
 pub struct MockBiddingService {
     pub mock_partial_bidding_service: MockPartialBiddingService,
     pub mock_bidding_service_win_control: Arc<MockBiddingServiceWinControl>,
-    pub bidders: HashMap<SlotBidderId, Arc<MockSlotBidder>>,
+    /// When create_slot_bidder is called the bidder from bidders will be returned.
+    /// This is though as a single use thing, don't call create_slot_bidder twice for the same slot/block.
+    pub bidders: HashMap<SlotAndBlock, Arc<MockSlotBidder>>,
+    /// BidMaker we received on create_slot_bidder.
     pub bid_makers:
-        Arc<Mutex<HashMap<SlotBidderId, Box<dyn super::traits::BidMaker + Send + Sync>>>>,
-    pub last_session_id: u64,
+        Arc<Mutex<HashMap<SlotAndBlock, Box<dyn super::traits::BidMaker + Send + Sync>>>>,
 }
 
 impl Default for MockBiddingService {
@@ -42,28 +51,22 @@ impl MockBiddingService {
             mock_bidding_service_win_control: Arc::new(MockBiddingServiceWinControl::new()),
             bidders: Default::default(),
             bid_makers: Default::default(),
-            last_session_id: 0,
         }
-    }
-
-    fn new_session_id(&mut self) -> u64 {
-        self.last_session_id += 1;
-        self.last_session_id
     }
 }
 
 impl BiddingService for MockBiddingService {
     fn create_slot_bidder(
         &mut self,
-        _block: u64,
-        _slot: u64,
+        block: u64,
+        slot: u64,
         _slot_timestamp: time::OffsetDateTime,
         bid_maker: Box<dyn super::traits::BidMaker + Send + Sync>,
         _cancel: tokio_util::sync::CancellationToken,
     ) -> std::sync::Arc<dyn super::traits::SlotBidder> {
-        let id = self.new_session_id();
-        self.bid_makers.lock().insert(id, bid_maker);
-        self.bidders.get(&id).unwrap().clone()
+        let slot_block = SlotAndBlock { block, slot };
+        self.bid_makers.lock().insert(slot_block.clone(), bid_maker);
+        self.bidders.get(&slot_block).unwrap().clone()
     }
 
     fn win_control(&self) -> Arc<dyn BiddingServiceWinControl> {
