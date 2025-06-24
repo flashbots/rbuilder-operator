@@ -3,6 +3,7 @@ use mockall::automock;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
+use derivative::Derivative;
 use rbuilder::live_builder::block_output::{
     bid_value_source::interfaces::BidValueObs,
     bidding::interfaces::{BiddingServiceWinControl, LandedBlockInfo},
@@ -15,12 +16,14 @@ use tokio_util::sync::CancellationToken;
 pub struct BlockId(pub u64);
 
 /// Selected information coming from a BlockBuildingHelper.
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Derivative, Clone, Debug)]
+#[derivative(PartialEq, Eq)]
 pub struct BlockDescriptor {
     true_block_value: U256,
     can_add_payout_tx: bool,
     id: BlockId,
     /// For metrics
+    #[derivative(PartialEq = "ignore")]
     creation_time: OffsetDateTime,
 }
 
