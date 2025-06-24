@@ -47,9 +47,10 @@ impl BestTrueValueObserver {
     pub fn new_block_processor(
         url: String,
         signer: PrivateKeySigner,
+        max_concurrent_requests: usize,
         cancellation_token: CancellationToken,
     ) -> Result<Self> {
-        let backend = BlocksProcessorBackend::new(url, signer)?;
+        let backend = BlocksProcessorBackend::new(url, signer, max_concurrent_requests)?;
         Self::new(backend, cancellation_token)
     }
 

@@ -8580,6 +8580,7 @@ dependencies = [
  "clickhouse",
  "crossbeam-queue",
  "ctor",
+ "derivative",
  "exponential-backoff",
  "eyre",
  "flume",

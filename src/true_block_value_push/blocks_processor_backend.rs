@@ -1,4 +1,7 @@
-use crate::signed_http_client::SignedHttpClient;
+use crate::{
+    flashbots_config::default_blocks_processor_max_request_size_bytes,
+    signed_http_client::SignedHttpClient,
+};
 use alloy_signer_local::PrivateKeySigner;
 use jsonrpsee::core::client::ClientT;
 use tokio::runtime::Runtime;
@@ -23,10 +26,15 @@ pub struct BlocksProcessorBackend {
     /// A `current_thread` runtime for executing operations on the
     /// asynchronous client in a blocking manner. For more info: https://tokio.rs/tokio/topics/bridging
     runtime: Runtime,
+    max_concurrent_requests: usize,
 }
 
 impl BlocksProcessorBackend {
-    pub fn new(url: String, signer: PrivateKeySigner) -> Result<Self, Error> {
+    pub fn new(
+        url: String,
+        signer: PrivateKeySigner,
+        max_concurrent_requests: usize,
+    ) -> Result<Self, Error> {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?;
@@ -34,6 +42,7 @@ impl BlocksProcessorBackend {
             url,
             signer,
             runtime,
+            max_concurrent_requests,
         })
     }
 }
@@ -46,6 +55,9 @@ impl Backend for BlocksProcessorBackend {
         Ok(crate::signed_http_client::create_client(
             &self.url,
             self.signer.clone(),
+            // we use default here because request is small
+            default_blocks_processor_max_request_size_bytes(),
+            self.max_concurrent_requests,
         )?)
     }
 

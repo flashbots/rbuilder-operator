@@ -2,6 +2,7 @@
 //! This code has lots of copy/paste from the example config but it's not really copy/paste since we use our own private types.
 //! @Pending make this copy/paste generic code on the library
 use alloy_signer_local::PrivateKeySigner;
+use derivative::Derivative;
 use eyre::Context;
 use http::StatusCode;
 use jsonrpsee::RpcModule;
@@ -74,8 +75,9 @@ struct TBVPushRedisConfig {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, Derivative)]
 #[serde(default, deny_unknown_fields)]
+#[derivative(Default)]
 pub struct FlashbotsConfig {
     #[serde(flatten)]
     pub base_config: BaseConfig,
@@ -106,6 +108,13 @@ pub struct FlashbotsConfig {
     pub key_registration_url: Option<String>,
 
     pub blocks_processor_url: Option<String>,
+
+    #[serde(default = "default_blocks_processor_max_concurrent_requests")]
+    #[derivative(Default(value = "default_blocks_processor_max_concurrent_requests()"))]
+    pub blocks_processor_max_concurrent_requests: usize,
+    #[serde(default = "default_blocks_processor_max_request_size_bytes")]
+    #[derivative(Default(value = "default_blocks_processor_max_request_size_bytes()"))]
+    pub blocks_processor_max_request_size_bytes: u32,
 
     /// Cfg to push tbv to redis.
     /// For production we always need some tbv push (since it's used by smart-multiplexing.) so:
@@ -261,13 +270,21 @@ impl FlashbotsConfig {
         if let Some(url) = &self.blocks_processor_url {
             let bid_observer: Box<dyn BidObserver + Send + Sync> =
                 if let Some(block_processor_key) = block_processor_key {
-                    let client =
-                        crate::signed_http_client::create_client(url, block_processor_key)?;
+                    let client = crate::signed_http_client::create_client(
+                        url,
+                        block_processor_key,
+                        self.blocks_processor_max_request_size_bytes,
+                        self.blocks_processor_max_concurrent_requests,
+                    )?;
                     let block_processor =
                         BlocksProcessorClient::new(client, SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD);
                     Box::new(BlocksProcessorClientBidObserver::new(block_processor))
                 } else {
-                    let client = BlocksProcessorClient::try_from(url)?;
+                    let client = BlocksProcessorClient::try_from(
+                        url,
+                        self.blocks_processor_max_request_size_bytes,
+                        self.blocks_processor_max_concurrent_requests,
+                    )?;
                     Box::new(BlocksProcessorClientBidObserver::new(client))
                 };
             Ok(Some(bid_observer))
@@ -377,6 +394,7 @@ impl FlashbotsConfig {
                 Ok(Some(Box::new(BestTrueValueObserver::new_block_processor(
                     blocks_processor_url.clone(),
                     block_processor_key,
+                    self.blocks_processor_max_concurrent_requests,
                     cancellation_token.clone(),
                 )?)))
             } else {
@@ -472,6 +490,14 @@ impl FlashbotsConfig {
             .with_password(password);
         Ok(Some(client))
     }
+}
+
+pub fn default_blocks_processor_max_concurrent_requests() -> usize {
+    1024
+}
+
+pub fn default_blocks_processor_max_request_size_bytes() -> u32 {
+    31457280 // 30MB
 }
 
 #[cfg(test)]

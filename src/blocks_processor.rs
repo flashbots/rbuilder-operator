@@ -20,7 +20,7 @@ use serde_json::value::RawValue;
 use serde_with::{serde_as, DisplayFromStr};
 use std::{sync::Arc, time::Duration};
 use time::format_description::well_known;
-use tracing::{error, trace, warn, Span};
+use tracing::{error, warn, Span};
 
 use crate::metrics::inc_submit_block_errors;
 
@@ -112,9 +112,16 @@ pub struct BlocksProcessorClient<HttpClientType> {
 }
 
 impl BlocksProcessorClient<HttpClient> {
-    pub fn try_from(url: &str) -> eyre::Result<Self> {
+    pub fn try_from(
+        url: &str,
+        max_request_size: u32,
+        max_concurrent_requests: usize,
+    ) -> eyre::Result<Self> {
         Ok(Self {
-            client: HttpClientBuilder::default().build(url)?,
+            client: HttpClientBuilder::default()
+                .max_request_size(max_request_size)
+                .max_concurrent_requests(max_concurrent_requests)
+                .build(url)?,
             consume_built_block_method: DEFAULT_BLOCK_CONSUME_BUILT_BLOCK_METHOD,
         })
     }
@@ -205,7 +212,7 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
                 }
                 Err(err) => match sleep_time {
                     Some(time) => {
-                        trace!(?err, "Block processor returned error, retrying.");
+                        warn!(?err, "Block processor returned error, retrying.");
                         tokio::time::sleep(time).await;
                     }
                     None => {
