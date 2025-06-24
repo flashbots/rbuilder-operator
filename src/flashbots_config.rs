@@ -2,6 +2,7 @@
 //! This code has lots of copy/paste from the example config but it's not really copy/paste since we use our own private types.
 //! @Pending make this copy/paste generic code on the library
 use alloy_signer_local::PrivateKeySigner;
+use derivative::Derivative;
 use eyre::Context;
 use http::StatusCode;
 use jsonrpsee::RpcModule;
@@ -74,8 +75,9 @@ struct TBVPushRedisConfig {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, Derivative)]
 #[serde(default, deny_unknown_fields)]
+#[derivative(Default)]
 pub struct FlashbotsConfig {
     #[serde(flatten)]
     pub base_config: BaseConfig,
@@ -108,8 +110,10 @@ pub struct FlashbotsConfig {
     pub blocks_processor_url: Option<String>,
 
     #[serde(default = "default_blocks_processor_max_concurrent_requests")]
+    #[derivative(Default(value = "default_blocks_processor_max_concurrent_requests()"))]
     pub blocks_processor_max_concurrent_requests: usize,
     #[serde(default = "default_blocks_processor_max_request_size_bytes")]
+    #[derivative(Default(value = "default_blocks_processor_max_request_size_bytes()"))]
     pub blocks_processor_max_request_size_bytes: u32,
 
     /// Cfg to push tbv to redis.
