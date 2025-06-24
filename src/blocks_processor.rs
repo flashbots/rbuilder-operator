@@ -20,7 +20,7 @@ use serde_json::value::RawValue;
 use serde_with::{serde_as, DisplayFromStr};
 use std::{sync::Arc, time::Duration};
 use time::format_description::well_known;
-use tracing::{error, trace, warn, Span};
+use tracing::{error, warn, Span};
 
 use crate::metrics::inc_submit_block_errors;
 
@@ -212,7 +212,7 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
                 }
                 Err(err) => match sleep_time {
                     Some(time) => {
-                        trace!(?err, "Block processor returned error, retrying.");
+                        warn!(?err, "Block processor returned error, retrying.");
                         tokio::time::sleep(time).await;
                     }
                     None => {
