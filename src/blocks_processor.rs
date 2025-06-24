@@ -112,9 +112,16 @@ pub struct BlocksProcessorClient<HttpClientType> {
 }
 
 impl BlocksProcessorClient<HttpClient> {
-    pub fn try_from(url: &str) -> eyre::Result<Self> {
+    pub fn try_from(
+        url: &str,
+        max_request_size: u32,
+        max_concurrent_requests: usize,
+    ) -> eyre::Result<Self> {
         Ok(Self {
-            client: HttpClientBuilder::default().build(url)?,
+            client: HttpClientBuilder::default()
+                .max_request_size(max_request_size)
+                .max_concurrent_requests(max_concurrent_requests)
+                .build(url)?,
             consume_built_block_method: DEFAULT_BLOCK_CONSUME_BUILT_BLOCK_METHOD,
         })
     }

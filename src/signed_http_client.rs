@@ -16,6 +16,8 @@ pub type SignedHttpClient =
 pub fn create_client(
     url: &str,
     signer: PrivateKeySigner,
+    max_request_size: u32,
+    max_concurrent_requests: usize,
 ) -> Result<SignedHttpClient, jsonrpsee::core::Error> {
     let signing_middleware = FlashbotsSignerLayer::new(signer);
     let service_builder = ServiceBuilder::new()
@@ -23,6 +25,8 @@ pub fn create_client(
         .map_err(map_error as MapErrorFn)
         .layer(signing_middleware);
     let client = HttpClientBuilder::default()
+        .max_request_size(max_request_size)
+        .max_concurrent_requests(max_concurrent_requests)
         .set_middleware(service_builder)
         .build(url)?;
     Ok(client)
