@@ -229,13 +229,13 @@ impl FlashbotsConfig {
         &self,
         landed_blocks_history: &[LandedBlockInfo],
         _cancellation_token: CancellationToken,
-    ) -> eyre::Result<Box<dyn BiddingService>> {
-        let client = Box::new(
+    ) -> eyre::Result<Arc<dyn BiddingService>> {
+        let client = Arc::new(
             BiddingServiceClientAdapter::new(&self.bidding_service_ipc_path, landed_blocks_history)
                 .await
                 .map_err(|e| eyre::Report::new(e).wrap_err("Unable to connect to remote bidder"))?,
         );
-        Ok(Box::new(BiddingServiceAdapter::new(client)))
+        Ok(Arc::new(BiddingServiceAdapter::new(client)))
     }
 
     /// Creates a new PrivateKeySigner and registers the associated address on key_registration_url
@@ -340,7 +340,7 @@ impl FlashbotsConfig {
             WALLET_INIT_HISTORY_SIZE,
         )?;
         let bid_value_source = self.create_bid_value_source(cancellation_token.clone())?;
-        let bidding_service: Box<dyn BiddingService> = self
+        let bidding_service: Arc<dyn BiddingService> = self
             .create_bidding_service(&wallet_history, cancellation_token.clone())
             .await?;
         let bidding_service_win_control = bidding_service.win_control();

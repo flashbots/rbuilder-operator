@@ -3,16 +3,23 @@ use std::sync::Arc;
 use ahash::HashMap;
 use mockall::automock;
 use parking_lot::Mutex;
-use rbuilder::live_builder::block_output::bidding::interfaces::{
-    BiddingServiceWinControl, LandedBlockInfo, MockBiddingServiceWinControl,
+use rbuilder::live_builder::block_output::bidding::{
+    block_bid_with_stats::BlockBidWithStats,
+    interfaces::{
+        BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo,
+        MockBiddingServiceWinControl,
+    },
 };
 
-use super::{mock_slot_bidder::MockSlotBidder, traits::BiddingService};
+use crate::block_descriptor_bidding::traits::MockUnfinishedBlockBuildingSink;
+
+use super::traits::BiddingService;
 
 #[automock]
 pub trait PartialBiddingService {
-    fn update_new_landed_blocks_detected(&mut self, landed_blocks: &[LandedBlockInfo]);
-    fn update_failed_reading_new_landed_blocks(&mut self);
+    fn update_new_landed_blocks_detected(&self, landed_blocks: &[LandedBlockInfo]);
+    fn update_failed_reading_new_landed_blocks(&self);
+    fn update_new_bid(&self, bid: BlockBidWithStats);
 }
 
 /// Slot + block to use on maps
@@ -32,7 +39,7 @@ pub struct MockBiddingService {
     pub mock_bidding_service_win_control: Arc<MockBiddingServiceWinControl>,
     /// When create_slot_bidder is called the bidder from bidders will be returned.
     /// This is though as a single use thing, don't call create_slot_bidder twice for the same slot/block.
-    pub bidders: HashMap<SlotAndBlock, Arc<MockSlotBidder>>,
+    pub bidders: HashMap<SlotAndBlock, Arc<MockUnfinishedBlockBuildingSink>>,
     /// BidMaker we received on create_slot_bidder.
     pub bid_makers:
         Arc<Mutex<HashMap<SlotAndBlock, Box<dyn super::traits::BidMaker + Send + Sync>>>>,
@@ -57,13 +64,13 @@ impl MockBiddingService {
 
 impl BiddingService for MockBiddingService {
     fn create_slot_bidder(
-        &mut self,
+        &self,
         block: u64,
         slot: u64,
         _slot_timestamp: time::OffsetDateTime,
         bid_maker: Box<dyn super::traits::BidMaker + Send + Sync>,
         _cancel: tokio_util::sync::CancellationToken,
-    ) -> std::sync::Arc<dyn super::traits::SlotBidder> {
+    ) -> std::sync::Arc<dyn super::traits::UnfinishedBlockBuildingSink> {
         let slot_block = SlotAndBlock { block, slot };
         self.bid_makers.lock().insert(slot_block.clone(), bid_maker);
         self.bidders.get(&slot_block).unwrap().clone()
@@ -73,13 +80,19 @@ impl BiddingService for MockBiddingService {
         self.mock_bidding_service_win_control.clone()
     }
 
-    fn update_new_landed_blocks_detected(&mut self, landed_blocks: &[LandedBlockInfo]) {
+    fn update_new_landed_blocks_detected(&self, landed_blocks: &[LandedBlockInfo]) {
         self.mock_partial_bidding_service
             .update_new_landed_blocks_detected(landed_blocks)
     }
 
-    fn update_failed_reading_new_landed_blocks(&mut self) {
+    fn update_failed_reading_new_landed_blocks(&self) {
         self.mock_partial_bidding_service
             .update_failed_reading_new_landed_blocks()
+    }
+}
+
+impl BlockBidWithStatsObs for MockBiddingService {
+    fn update_new_bid(&self, bid: BlockBidWithStats) {
+        self.mock_partial_bidding_service.update_new_bid(bid)
     }
 }

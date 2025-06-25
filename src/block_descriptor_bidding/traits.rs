@@ -4,9 +4,8 @@ use std::sync::Arc;
 
 use alloy_primitives::U256;
 use derivative::Derivative;
-use rbuilder::live_builder::block_output::{
-    bid_value_source::interfaces::BidValueObs,
-    bidding::interfaces::{BiddingServiceWinControl, LandedBlockInfo},
+use rbuilder::live_builder::block_output::bidding::interfaces::{
+    BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo,
 };
 use time::OffsetDateTime;
 use tokio_util::sync::CancellationToken;
@@ -91,25 +90,22 @@ pub trait UnfinishedBlockBuildingSink: std::fmt::Debug + Send + Sync {
     fn can_use_suggested_fee_recipient_as_coinbase(&self) -> bool;
 }
 
-/// Simplified version of [rbuilder::live_builder::block_output::bidding::interfaces::SlotBidder]
-pub trait SlotBidder: UnfinishedBlockBuildingSink + BidValueObs {}
-
 /// Simplified version of [rbuilder::live_builder::block_output::bidding::interfaces::BiddingService]
-pub trait BiddingService: std::fmt::Debug + Send + Sync {
+pub trait BiddingService: BlockBidWithStatsObs + std::fmt::Debug + Send + Sync {
     fn create_slot_bidder(
-        &mut self,
+        &self,
         block: u64,
         slot: u64,
         slot_timestamp: OffsetDateTime,
         bid_maker: Box<dyn BidMaker + Send + Sync>,
         cancel: CancellationToken,
-    ) -> Arc<dyn SlotBidder>;
+    ) -> Arc<dyn UnfinishedBlockBuildingSink>;
 
     // Consider moving these 3 func could be on a parent trait (I didn't want to modify the original BiddingService yet).
 
     fn win_control(&self) -> Arc<dyn BiddingServiceWinControl>;
 
-    fn update_new_landed_blocks_detected(&mut self, landed_blocks: &[LandedBlockInfo]);
+    fn update_new_landed_blocks_detected(&self, landed_blocks: &[LandedBlockInfo]);
 
-    fn update_failed_reading_new_landed_blocks(&mut self);
+    fn update_failed_reading_new_landed_blocks(&self);
 }

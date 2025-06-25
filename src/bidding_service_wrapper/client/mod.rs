@@ -1,2 +1,2 @@
 pub mod bidding_service_client_adapter;
-mod slot_bidder_client;
+mod unfinished_block_building_sink_client;
