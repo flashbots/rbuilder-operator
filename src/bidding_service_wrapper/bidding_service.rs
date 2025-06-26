@@ -92,11 +92,14 @@ pub struct CreateSlotBidderParams {
     pub block: u64,
     #[prost(uint64, tag = "2")]
     pub slot: u64,
+    /// Array of 32 bytes
+    #[prost(bytes = "vec", tag = "3")]
+    pub parent_hash: ::prost::alloc::vec::Vec<u8>,
     /// Id identifying the session. Used in all following calls.
-    #[prost(uint64, tag = "3")]
+    #[prost(uint64, tag = "4")]
     pub session_id: u64,
     /// unix ts
-    #[prost(int64, tag = "4")]
+    #[prost(int64, tag = "5")]
     pub slot_timestamp: i64,
 }
 /// Info about a onchain block from reth.
@@ -381,7 +384,7 @@ pub mod bidding_service_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
-        /// BiddingService->ScrapedBidsObs
+        /// BiddingService->BlockBidWithStatsObs
         pub async fn update_new_bid(
             &mut self,
             request: impl tonic::IntoRequest<super::UpdateNewBidParams>,
@@ -463,7 +466,7 @@ pub mod bidding_service_server {
             &self,
             request: tonic::Request<super::Empty>,
         ) -> Result<tonic::Response<super::Empty>, tonic::Status>;
-        /// BiddingService->ScrapedBidsObs
+        /// BiddingService->BlockBidWithStatsObs
         async fn update_new_bid(
             &self,
             request: tonic::Request<super::UpdateNewBidParams>,

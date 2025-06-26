@@ -8,7 +8,7 @@ use rbuilder::{
         block_bid_with_stats::BlockBidWithStats,
         interfaces::{
             BidMaker as FullBidMaker, BiddingService as FullBiddingService,
-            BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo,
+            BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo, SlotBlockId,
         },
     },
 };
@@ -49,8 +49,7 @@ impl BiddingServiceAdapter {
 impl FullBiddingService for BiddingServiceAdapter {
     fn create_slot_bidder(
         &self,
-        block: u64,
-        slot: u64,
+        slot_block_id: SlotBlockId,
         slot_timestamp: OffsetDateTime,
         bid_maker: Box<dyn FullBidMaker + Send + Sync>,
         cancel: CancellationToken,
@@ -59,8 +58,7 @@ impl FullBiddingService for BiddingServiceAdapter {
         let wrapped_bid_maker = Box::new(BidMakerAdapter::new(bid_maker, block_registry.clone()));
 
         let bidder = self.bidding_service.create_slot_bidder(
-            block,
-            slot,
+            slot_block_id,
             slot_timestamp,
             wrapped_bid_maker,
             cancel,

@@ -7,7 +7,7 @@ use rbuilder::live_builder::block_output::bidding::{
     block_bid_with_stats::BlockBidWithStats,
     interfaces::{
         BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo,
-        MockBiddingServiceWinControl,
+        MockBiddingServiceWinControl, SlotBlockId,
     },
 };
 
@@ -21,14 +21,6 @@ pub trait PartialBiddingService {
     fn update_failed_reading_new_landed_blocks(&self);
     fn update_new_bid(&self, bid: BlockBidWithStats);
 }
-
-/// Slot + block to use on maps
-#[derive(Debug, Eq, Hash, PartialEq, Clone)]
-pub struct SlotAndBlock {
-    pub block: u64,
-    pub slot: u64,
-}
-
 /// Custom mock for BiddingService.
 /// Usage:
 /// Create a MockBiddingService via new.
@@ -39,10 +31,10 @@ pub struct MockBiddingService {
     pub mock_bidding_service_win_control: Arc<MockBiddingServiceWinControl>,
     /// When create_slot_bidder is called the bidder from bidders will be returned.
     /// This is though as a single use thing, don't call create_slot_bidder twice for the same slot/block.
-    pub bidders: HashMap<SlotAndBlock, Arc<MockUnfinishedBlockBuildingSink>>,
+    pub bidders: HashMap<SlotBlockId, Arc<MockUnfinishedBlockBuildingSink>>,
     /// BidMaker we received on create_slot_bidder.
     pub bid_makers:
-        Arc<Mutex<HashMap<SlotAndBlock, Box<dyn super::traits::BidMaker + Send + Sync>>>>,
+        Arc<Mutex<HashMap<SlotBlockId, Box<dyn super::traits::BidMaker + Send + Sync>>>>,
 }
 
 impl Default for MockBiddingService {
@@ -65,15 +57,15 @@ impl MockBiddingService {
 impl BiddingService for MockBiddingService {
     fn create_slot_bidder(
         &self,
-        block: u64,
-        slot: u64,
+        slot_block_id: SlotBlockId,
         _slot_timestamp: time::OffsetDateTime,
         bid_maker: Box<dyn super::traits::BidMaker + Send + Sync>,
         _cancel: tokio_util::sync::CancellationToken,
     ) -> std::sync::Arc<dyn super::traits::UnfinishedBlockBuildingSink> {
-        let slot_block = SlotAndBlock { block, slot };
-        self.bid_makers.lock().insert(slot_block.clone(), bid_maker);
-        self.bidders.get(&slot_block).unwrap().clone()
+        self.bid_makers
+            .lock()
+            .insert(slot_block_id.clone(), bid_maker);
+        self.bidders.get(&slot_block_id).unwrap().clone()
     }
 
     fn win_control(&self) -> Arc<dyn BiddingServiceWinControl> {

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use alloy_primitives::U256;
 use derivative::Derivative;
 use rbuilder::live_builder::block_output::bidding::interfaces::{
-    BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo,
+    BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo, SlotBlockId,
 };
 use time::OffsetDateTime;
 use tokio_util::sync::CancellationToken;
@@ -94,8 +94,7 @@ pub trait UnfinishedBlockBuildingSink: std::fmt::Debug + Send + Sync {
 pub trait BiddingService: BlockBidWithStatsObs + std::fmt::Debug + Send + Sync {
     fn create_slot_bidder(
         &self,
-        block: u64,
-        slot: u64,
+        slot_block_id: SlotBlockId,
         slot_timestamp: OffsetDateTime,
         bid_maker: Box<dyn BidMaker + Send + Sync>,
         cancel: CancellationToken,

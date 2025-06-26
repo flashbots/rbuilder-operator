@@ -96,10 +96,11 @@ message DestroySlotBidderParams {
 message CreateSlotBidderParams {
     uint64 block = 1;
     uint64 slot = 2;
+    bytes parent_hash = 3; // Array of 32 bytes
     // Id identifying the session. Used in all following calls.
-    uint64 session_id = 3;
+    uint64 session_id = 4;
     // unix ts
-    int64 slot_timestamp = 4;
+    int64 slot_timestamp = 5;
 }
 
 

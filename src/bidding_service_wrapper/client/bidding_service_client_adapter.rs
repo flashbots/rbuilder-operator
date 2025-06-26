@@ -4,6 +4,7 @@ use rbuilder::{
         block_bid_with_stats::BlockBidWithStats,
         interfaces::{
             BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo as RealLandedBlockInfo,
+            SlotBlockId,
         },
     },
     utils::{build_info::Version, timestamp_us_to_offset_datetime},
@@ -24,7 +25,7 @@ use tracing::error;
 use crate::{
     bidding_service_wrapper::{
         bidding_service_client::BiddingServiceClient,
-        conversion::{real2rpc_block_bid, real2rpc_landed_block_info},
+        conversion::{real2rpc_block_bid, real2rpc_block_hash, real2rpc_landed_block_info},
         CreateSlotBidderParams, DestroySlotBidderParams, Empty, LandedBlocksParams,
         MustWinBlockParams, NewBlockParams, UpdateNewBidParams,
     },
@@ -235,8 +236,7 @@ impl BiddingServiceClientAdapter {
 impl BiddingService for BiddingServiceClientAdapter {
     fn create_slot_bidder(
         &self,
-        block: u64,
-        slot: u64,
+        slot_block_id: SlotBlockId,
         slot_timestamp: time::OffsetDateTime,
         bid_maker: Box<dyn BidMaker + Send + Sync>,
         cancel: tokio_util::sync::CancellationToken,
@@ -249,8 +249,9 @@ impl BiddingService for BiddingServiceClientAdapter {
             .send(BiddingServiceClientCommand::CreateSlotBidder(
                 CreateSlotBidderCommandData {
                     params: CreateSlotBidderParams {
-                        block,
-                        slot,
+                        block: slot_block_id.block(),
+                        slot: slot_block_id.slot(),
+                        parent_hash: real2rpc_block_hash(*slot_block_id.parent_block_hash()),
                         session_id,
                         slot_timestamp: slot_timestamp.unix_timestamp(),
                     },

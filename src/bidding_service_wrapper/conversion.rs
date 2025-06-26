@@ -62,7 +62,7 @@ pub fn real2rpc_block_hash(v: BlockHash) -> Vec<u8> {
     v.as_slice().to_vec()
 }
 
-pub fn rpc2real_block_hash(v: Vec<u8>) -> Result<BlockHash, Status> {
+pub fn rpc2real_block_hash(v: &Vec<u8>) -> Result<BlockHash, Status> {
     BlockHash::try_from(v.as_slice()).map_err(|_| Status::invalid_argument("rpc BlockHash error"))
 }
 
@@ -105,8 +105,8 @@ pub fn rpc2real_block_bid(bid: UpdateNewBidParams) -> Result<BlockBidWithStats, 
             publisher_type: rpc2real_publisher_type(bid.publisher_type)?,
             relay_time: bid.relay_time,
             relay_name: bid.relay_name,
-            block_hash: rpc2real_block_hash(bid.block_hash)?,
-            parent_hash: rpc2real_block_hash(bid.parent_hash)?,
+            block_hash: rpc2real_block_hash(&bid.block_hash)?,
+            parent_hash: rpc2real_block_hash(&bid.parent_hash)?,
             value: rpc2real_u256(bid.value)?,
             slot_number: bid.slot_number,
             block_number: bid.block_number,
