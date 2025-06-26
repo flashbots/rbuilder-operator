@@ -1,4 +1,3 @@
-pub mod best_bid_ws;
 pub mod bidding_service_wrapper;
 pub mod block_descriptor_bidding;
 pub mod blocks_processor;
