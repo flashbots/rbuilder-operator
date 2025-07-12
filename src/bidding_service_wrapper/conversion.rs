@@ -143,6 +143,7 @@ pub fn real2rpc_publisher_type(ty: bid_scraper::types::PublisherType) -> i32 {
             super::PublisherType::UltrasoundWs as i32
         }
         bid_scraper::types::PublisherType::BloxrouteWs => super::PublisherType::BloxrouteWs as i32,
+        bid_scraper::types::PublisherType::ExternalWs => super::PublisherType::ExternalWs as i32,
     }
 }
 
@@ -153,6 +154,7 @@ pub fn rpc2real_publisher_type(ty: i32) -> Result<bid_scraper::types::PublisherT
             super::PublisherType::RelayHeaders => bid_scraper::types::PublisherType::RelayHeaders,
             super::PublisherType::UltrasoundWs => bid_scraper::types::PublisherType::UltrasoundWs,
             super::PublisherType::BloxrouteWs => bid_scraper::types::PublisherType::BloxrouteWs,
+            super::PublisherType::ExternalWs => bid_scraper::types::PublisherType::ExternalWs,
         })
     } else {
         Err(Status::invalid_argument("rpc PublisherType error"))

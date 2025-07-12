@@ -58,6 +58,7 @@ enum PublisherType {
   RelayHeaders = 1;
   UltrasoundWs = 2;
   BloxrouteWs = 3;
+  ExternalWs = 4;
 }
 
 

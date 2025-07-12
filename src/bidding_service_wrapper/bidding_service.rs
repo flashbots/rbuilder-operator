@@ -160,6 +160,7 @@ pub enum PublisherType {
     RelayHeaders = 1,
     UltrasoundWs = 2,
     BloxrouteWs = 3,
+    ExternalWs = 4,
 }
 impl PublisherType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -172,6 +173,7 @@ impl PublisherType {
             PublisherType::RelayHeaders => "RelayHeaders",
             PublisherType::UltrasoundWs => "UltrasoundWs",
             PublisherType::BloxrouteWs => "BloxrouteWs",
+            PublisherType::ExternalWs => "ExternalWs",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -181,6 +183,7 @@ impl PublisherType {
             "RelayHeaders" => Some(Self::RelayHeaders),
             "UltrasoundWs" => Some(Self::UltrasoundWs),
             "BloxrouteWs" => Some(Self::BloxrouteWs),
+            "ExternalWs" => Some(Self::ExternalWs),
             _ => None,
         }
     }
