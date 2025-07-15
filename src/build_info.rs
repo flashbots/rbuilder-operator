@@ -17,10 +17,10 @@ pub fn print_version_info() {
     );
     println!("branch:         {}", GIT_HEAD_REF.unwrap_or_default());
     println!("build_platform: {:?}", CI_PLATFORM.unwrap_or_default());
-    println!("build_time:     {}", BUILT_TIME_UTC);
-    println!("features:       {:?}", FEATURES);
-    println!("profile:        {}", PROFILE);
-    println!("rustc:          {}", RUSTC_VERSION);
+    println!("build_time:     {BUILT_TIME_UTC}");
+    println!("features:       {FEATURES:?}");
+    println!("profile:        {PROFILE}");
+    println!("rustc:          {RUSTC_VERSION}");
 }
 
 pub fn rbuilder_version() -> Version {
