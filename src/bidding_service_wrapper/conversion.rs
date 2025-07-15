@@ -37,6 +37,7 @@ pub fn real2rpc_u256(v: U256) -> Vec<u64> {
     v.as_limbs().to_vec()
 }
 
+#[allow(clippy::result_large_err)]
 pub fn rpc2real_u256(v: Vec<u64>) -> Result<U256, Status> {
     U256::checked_from_limbs_slice(&v).ok_or(Status::invalid_argument("rpc U256 limbs error"))
 }
@@ -45,6 +46,7 @@ pub fn real2rpc_address(v: Address) -> Vec<u8> {
     v.as_slice().to_vec()
 }
 
+#[allow(clippy::result_large_err)]
 pub fn rpc2real_address(v: Vec<u8>) -> Result<Address, Status> {
     Address::try_from(v.as_slice()).map_err(|_| Status::invalid_argument("rpc Address error"))
 }
@@ -53,6 +55,7 @@ pub fn real2rpc_bls_public_key(v: BlsPublicKey) -> Vec<u8> {
     v.as_slice().to_vec()
 }
 
+#[allow(clippy::result_large_err)]
 pub fn rpc2real_bls_public_key(v: Vec<u8>) -> Result<BlsPublicKey, Status> {
     BlsPublicKey::try_from(v.as_slice())
         .map_err(|_| Status::invalid_argument("rpc BlsPublicKey error"))
@@ -62,6 +65,7 @@ pub fn real2rpc_block_hash(v: BlockHash) -> Vec<u8> {
     v.as_slice().to_vec()
 }
 
+#[allow(clippy::result_large_err)]
 pub fn rpc2real_block_hash(v: &Vec<u8>) -> Result<BlockHash, Status> {
     BlockHash::try_from(v.as_slice()).map_err(|_| Status::invalid_argument("rpc BlockHash error"))
 }
@@ -147,6 +151,7 @@ pub fn real2rpc_publisher_type(ty: bid_scraper::types::PublisherType) -> i32 {
     }
 }
 
+#[allow(clippy::result_large_err)]
 pub fn rpc2real_publisher_type(ty: i32) -> Result<bid_scraper::types::PublisherType, Status> {
     if let Some(ty) = super::PublisherType::from_i32(ty) {
         Ok(match ty {
