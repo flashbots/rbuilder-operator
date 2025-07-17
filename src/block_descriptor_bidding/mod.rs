@@ -7,7 +7,8 @@ mod bid_maker_adapter;
 pub mod bidding_service_adapter;
 mod block_registry;
 pub mod mock_bidding_service;
+pub mod mock_slot_bidder;
+mod slot_bidder_adapter;
 pub mod traits;
-mod unfinished_block_building_sink_adapter;
 
 pub type SlotBidderId = u64;
