@@ -1,20 +1,13 @@
 use alloy_primitives::U256;
 use rbuilder::{
-    live_builder::block_output::bidding::{
-        block_bid_with_stats::BlockBidWithStats,
-        interfaces::{
-            BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo as RealLandedBlockInfo,
-            SlotBlockId,
-        },
+    live_builder::block_output::bidding::interfaces::{
+        BiddingServiceWinControl, LandedBlockInfo as RealLandedBlockInfo,
     },
     utils::{build_info::Version, timestamp_us_to_offset_datetime},
 };
 use std::{
     path::PathBuf,
-    sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicBool, Arc},
 };
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
@@ -24,18 +17,15 @@ use tracing::error;
 
 use crate::{
     bidding_service_wrapper::{
-        bidding_service_client::BiddingServiceClient,
-        conversion::{real2rpc_block_bid, real2rpc_block_hash, real2rpc_landed_block_info},
+        bidding_service_client::BiddingServiceClient, conversion::real2rpc_landed_block_info,
         CreateSlotBidderParams, DestroySlotBidderParams, Empty, LandedBlocksParams,
         MustWinBlockParams, NewBlockParams, UpdateNewBidParams,
     },
-    block_descriptor_bidding::traits::{
-        Bid, BidMaker, BiddingService, BlockId, UnfinishedBlockBuildingSink,
-    },
+    block_descriptor_bidding::traits::{Bid, BidMaker, BiddingService, BlockId, SlotBidder},
     metrics::set_bidding_service_version,
 };
 
-use super::unfinished_block_building_sink_client::UnfinishedBlockBuildingSinkClient;
+use super::slot_bidder_client::SlotBidderClient;
 
 pub struct CreateSlotBidderCommandData {
     params: CreateSlotBidderParams,
@@ -44,7 +34,6 @@ pub struct CreateSlotBidderCommandData {
     can_use_suggested_fee_recipient_as_coinbase: Arc<AtomicBool>,
 }
 
-#[allow(clippy::large_enum_variant)]
 pub enum BiddingServiceClientCommand {
     CreateSlotBidder(CreateSlotBidderCommandData),
     NewBlock(NewBlockParams),
@@ -58,14 +47,14 @@ pub enum BiddingServiceClientCommand {
 /// Adapts [BiddingServiceClient] to [BiddingService].
 /// To adapt sync world ([BiddingService]) to async ([BiddingServiceClient]) it receives commands via a channel (commands_sender)
 /// which is handled by a tokio task.
-/// It creates a UnfinishedBlockBuildingSinkClient implementing UnfinishedBlockBuildingSink per create_slot_bidder call.
-/// For each UnfinishedBlockBuildingSinkClient created a task is created to poll callbacks (eg: bids and can_use_suggested_fee_recipient_as_coinbase updates).
-/// The created UnfinishedBlockBuildingSinkClient forwards all calls to the BiddingServiceClientAdapter as commands.
+/// It creates a SlotBidderClient implementing SlotBidder per create_slot_bidder call.
+/// For each SlotBidderClient created a task is created to poll callbacks (eg: bids and can_use_suggested_fee_recipient_as_coinbase updates).
+/// The created SlotBidderClient forwards all calls to the BiddingServiceClientAdapter as commands.
 #[derive(Debug)]
 pub struct BiddingServiceClientAdapter {
     commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
     win_control: Arc<dyn BiddingServiceWinControl>,
-    last_session_id: AtomicU64,
+    last_session_id: u64,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -93,12 +82,13 @@ impl BiddingServiceClientAdapter {
         Ok(Self {
             commands_sender,
             win_control,
-            last_session_id: AtomicU64::new(0),
+            last_session_id: 0,
         })
     }
 
-    fn new_session_id(&self) -> u64 {
-        self.last_session_id.fetch_add(1, Ordering::Relaxed)
+    fn new_session_id(&mut self) -> u64 {
+        self.last_session_id += 1;
+        self.last_session_id
     }
 
     async fn init_sender_task(
@@ -235,12 +225,13 @@ impl BiddingServiceClientAdapter {
 
 impl BiddingService for BiddingServiceClientAdapter {
     fn create_slot_bidder(
-        &self,
-        slot_block_id: SlotBlockId,
+        &mut self,
+        block: u64,
+        slot: u64,
         slot_timestamp: time::OffsetDateTime,
         bid_maker: Box<dyn BidMaker + Send + Sync>,
         cancel: tokio_util::sync::CancellationToken,
-    ) -> Arc<dyn UnfinishedBlockBuildingSink> {
+    ) -> Arc<dyn SlotBidder> {
         // This default will be immediately changed by a callback.
         let can_use_suggested_fee_recipient_as_coinbase = Arc::new(AtomicBool::new(false));
         let session_id = self.new_session_id();
@@ -249,9 +240,8 @@ impl BiddingService for BiddingServiceClientAdapter {
             .send(BiddingServiceClientCommand::CreateSlotBidder(
                 CreateSlotBidderCommandData {
                     params: CreateSlotBidderParams {
-                        block: slot_block_id.block(),
-                        slot: slot_block_id.slot(),
-                        parent_hash: real2rpc_block_hash(*slot_block_id.parent_block_hash()),
+                        block,
+                        slot,
                         session_id,
                         slot_timestamp: slot_timestamp.unix_timestamp(),
                     },
@@ -261,7 +251,7 @@ impl BiddingService for BiddingServiceClientAdapter {
                         can_use_suggested_fee_recipient_as_coinbase.clone(),
                 },
             ));
-        Arc::new(UnfinishedBlockBuildingSinkClient::new(
+        Arc::new(SlotBidderClient::new(
             session_id,
             self.commands_sender.clone(),
             can_use_suggested_fee_recipient_as_coinbase,
@@ -272,7 +262,7 @@ impl BiddingService for BiddingServiceClientAdapter {
         self.win_control.clone()
     }
 
-    fn update_new_landed_blocks_detected(&self, landed_blocks: &[RealLandedBlockInfo]) {
+    fn update_new_landed_blocks_detected(&mut self, landed_blocks: &[RealLandedBlockInfo]) {
         let param = LandedBlocksParams {
             landed_block_info: landed_blocks
                 .iter()
@@ -286,22 +276,13 @@ impl BiddingService for BiddingServiceClientAdapter {
                 ));
     }
 
-    fn update_failed_reading_new_landed_blocks(&self) {
+    fn update_failed_reading_new_landed_blocks(&mut self) {
         let _ = self
             .commands_sender
             .send(BiddingServiceClientCommand::UpdateFailedReadingNewLandedBlocks);
     }
 }
 
-impl BlockBidWithStatsObs for BiddingServiceClientAdapter {
-    fn update_new_bid(&self, bid_with_stats: BlockBidWithStats) {
-        let _ = self
-            .commands_sender
-            .send(BiddingServiceClientCommand::UpdateNewBid(
-                real2rpc_block_bid(bid_with_stats),
-            ));
-    }
-}
 #[derive(Debug)]
 struct BiddingServiceWinControlAdapter {
     commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
