@@ -21,6 +21,14 @@ on:
         required: false
         type: boolean
         default: false
+      ubuntu-version:
+        description: 'Ubuntu Version'
+        required: false
+        type: choice
+        options:
+          - '24.04'
+          - '22.04'
+        default: '24.04'
 
 jobs:
   extract-version:
@@ -57,9 +65,10 @@ jobs:
     if: ${{ github.event.inputs.build-binary == 'true' || github.event_name == 'push'}} # when manually triggered or version tagged
     runs-on: ${{ matrix.configs.runner }}
     container:
-      image: ubuntu:22.04
+      image: ubuntu:${{ github.event.inputs.ubuntu-version || '24.04' }}
     env:
       VERSION: ${{ needs.extract-version.outputs.VERSION }}
+      UBUNTU_VERSION: ${{ github.event.inputs.ubuntu-version || '24.04' }}
     permissions:
       contents: write
       packages: write
@@ -75,6 +84,7 @@ jobs:
           apt-get update
           apt-get install -y \
             build-essential \
+            cmake \
             curl \
             git \
             libclang-dev \
@@ -88,7 +98,7 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare filename
-        run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}" >> $GITHUB_ENV
+        run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}-ubuntu${UBUNTU_VERSION}" >> $GITHUB_ENV
 
       - name: Build binary
         run: |
