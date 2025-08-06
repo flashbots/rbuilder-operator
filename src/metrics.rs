@@ -3,7 +3,7 @@
 use ctor::ctor;
 use lazy_static::lazy_static;
 use metrics_macros::register_metrics;
-use prometheus::{HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGaugeVec, Opts};
+use prometheus::{HistogramOpts, HistogramVec, IntCounterVec, IntGaugeVec, Opts};
 use rbuilder::{
     telemetry::{linear_buckets_range, REGISTRY},
     utils::build_info::Version,
@@ -14,12 +14,6 @@ register_metrics! {
     pub static BLOCK_API_ERRORS: IntCounterVec = IntCounterVec::new(
         Opts::new("block_api_errors", "counter of the block processor errors"),
         &["api_name"]
-    )
-    .unwrap();
-
-    pub static NON_0_COMPETITION_BIDS: IntCounter = IntCounter::new(
-        "non_0_competition_bids",
-        "Counter of non 0 bids seen on SCP stream"
     )
     .unwrap();
 
@@ -50,10 +44,6 @@ pub fn inc_submit_block_errors() {
 
 pub fn inc_publish_tbv_errors() {
     BLOCK_API_ERRORS.with_label_values(&["publish_tbv"]).inc()
-}
-
-pub fn inc_non_0_competition_bids() {
-    NON_0_COMPETITION_BIDS.inc();
 }
 
 pub(super) fn set_bidding_service_version(version: Version) {

@@ -7,24 +7,17 @@ use eyre::Context;
 use http::StatusCode;
 use jsonrpsee::RpcModule;
 use rbuilder::building::builders::parallel_builder::parallel_build_backtest;
-use rbuilder::building::builders::UnfinishedBlockBuildingSinkFactory;
 use rbuilder::building::order_priority::{FullProfitInfoGetter, NonMempoolProfitInfoGetter};
 use rbuilder::live_builder::base_config::EnvOrValue;
 use rbuilder::live_builder::block_output::bid_observer::BidObserver;
 use rbuilder::live_builder::block_output::bid_observer_multiplexer::BidObserverMultiplexer;
-use rbuilder::live_builder::block_output::bid_value_source::interfaces::BidValueSource;
-use rbuilder::live_builder::block_output::bid_value_source::null_bid_value_source::NullBidValueSource;
 use rbuilder::live_builder::block_output::bidding::interfaces::{
     BiddingService, BiddingServiceWinControl, LandedBlockInfo,
 };
-use rbuilder::live_builder::block_output::bidding::wallet_balance_watcher::WalletBalanceWatcher;
-use rbuilder::live_builder::block_output::block_sealing_bidder_factory::BlockSealingBidderFactory;
 use rbuilder::live_builder::config::{
-    build_backtest_block_ordering_builder, create_builders, BuilderConfig, SpecificBuilderConfig,
-    WALLET_INIT_HISTORY_SIZE,
+    build_backtest_block_ordering_builder, create_builder_from_sink, create_builders,
+    create_sink_factory_and_relays, BuilderConfig, SpecificBuilderConfig,
 };
-use rbuilder::live_builder::watchdog::spawn_watchdog_thread;
-use rbuilder::primitives::mev_boost::MevBoostRelaySlotInfoProvider;
 use rbuilder::provider::StateProviderFactory;
 use rbuilder::{
     building::builders::{BacktestSimulateBlockInput, Block},
@@ -40,7 +33,6 @@ use tokio_util::sync::CancellationToken;
 use tracing::{error, warn};
 use url::Url;
 
-use crate::best_bid_ws::BestBidWSConnector;
 use crate::bidding_service_wrapper::client::bidding_service_client_adapter::BiddingServiceClientAdapter;
 use crate::block_descriptor_bidding::bidding_service_adapter::BiddingServiceAdapter;
 use crate::blocks_processor::{
@@ -51,6 +43,8 @@ use crate::build_info::rbuilder_version;
 use crate::true_block_value_push::best_true_value_observer::BestTrueValueObserver;
 
 use clickhouse::Client;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, Default)]
@@ -91,11 +85,6 @@ pub struct FlashbotsConfig {
     #[serde(default)]
     pub flashbots_builder_pubkeys: Vec<String>,
 
-    /// ws stream url for getting best relay bid info
-    pub top_bid_ws_url: Option<EnvOrValue<String>>,
-    /// ws stream url authentication
-    pub top_bid_ws_basic_auth: Option<EnvOrValue<String>>,
-
     // bidding server ipc path config.
     bidding_service_ipc_path: String,
 
@@ -135,31 +124,47 @@ impl LiveBuilderConfig for FlashbotsConfig {
     where
         P: StateProviderFactory + Clone + 'static,
     {
-        let (sink_factory, slot_info_provider, bidding_service_win_control) = self
-            .create_sink_factory_and_relays(provider.clone(), cancellation_token.clone())
-            .await?;
+        let bidding_service_ipc_path = self.bidding_service_ipc_path.clone();
+        // Create the bidding service factory
+        let bidding_service_factory = |landed_blocks: &[LandedBlockInfo]| {
+            // Clone the data you need for the async block
+            let landed_blocks = landed_blocks.to_vec();
+            // Return a pinned boxed future
+            Box::pin(async move {
+                let client = Arc::new(
+                    BiddingServiceClientAdapter::new(&bidding_service_ipc_path, &landed_blocks)
+                        .await
+                        .map_err(|e| {
+                            eyre::Report::new(e).wrap_err("Unable to connect to remote bidder")
+                        })?,
+                );
+                let res: Arc<dyn BiddingService> = Arc::new(BiddingServiceAdapter::new(client));
+                Ok(res)
+            })
+                as Pin<Box<dyn Future<Output = eyre::Result<Arc<dyn BiddingService>>> + Send>>
+        };
+        let bid_observer = self.create_bid_observer(&cancellation_token).await?;
 
-        let blocklist_provider = self
-            .base_config
-            .blocklist_provider(cancellation_token.clone())
-            .await?;
-        let payload_event = MevBoostSlotDataGenerator::new(
-            self.l1_config.beacon_clients()?,
-            slot_info_provider,
-            blocklist_provider.clone(),
-            cancellation_token.clone(),
-        );
-
-        let mut res = self
-            .base_config
-            .create_builder_with_provider_factory(
+        let (sink_factory, slot_info_provider, bidding_service_win_control) =
+            create_sink_factory_and_relays(
+                &self.base_config,
+                &self.l1_config,
+                provider.clone(),
+                bid_observer,
+                bidding_service_factory,
                 cancellation_token.clone(),
-                sink_factory,
-                payload_event,
-                provider,
-                blocklist_provider,
             )
             .await?;
+
+        let mut res = create_builder_from_sink(
+            &self.base_config,
+            &self.l1_config,
+            provider,
+            sink_factory,
+            slot_info_provider,
+            cancellation_token,
+        )
+        .await?;
 
         let mut module = RpcModule::new(());
         module.register_async_method("bid_subsidiseBlock", move |params, _| {
@@ -229,13 +234,13 @@ impl FlashbotsConfig {
         &self,
         landed_blocks_history: &[LandedBlockInfo],
         _cancellation_token: CancellationToken,
-    ) -> eyre::Result<Box<dyn BiddingService>> {
-        let client = Box::new(
+    ) -> eyre::Result<Arc<dyn BiddingService>> {
+        let client = Arc::new(
             BiddingServiceClientAdapter::new(&self.bidding_service_ipc_path, landed_blocks_history)
                 .await
                 .map_err(|e| eyre::Report::new(e).wrap_err("Unable to connect to remote bidder"))?,
         );
-        Ok(Box::new(BiddingServiceAdapter::new(client)))
+        Ok(Arc::new(BiddingServiceAdapter::new(client)))
     }
 
     /// Creates a new PrivateKeySigner and registers the associated address on key_registration_url
@@ -300,23 +305,11 @@ impl FlashbotsConfig {
         eyre::bail!("blocks_processor_url should always be set if key_registration_url is set");
     }
 
-    /// Connects (UnfinishedBlockBuildingSinkFactoryWrapper->BlockSealingBidderFactory)->RelaySubmitSinkFactory
-    /// RelaySubmitSinkFactory: submits final blocks to relays
-    /// BlockSealingBidderFactory: performs sealing/bidding. Sends bids to the RelaySubmitSinkFactory
-    /// UnfinishedBlockBuildingSinkFactoryWrapper: sends all the tbv info via redis and forwards to BlockSealingBidderFactory
-    #[allow(clippy::type_complexity)]
-    async fn create_sink_factory_and_relays<P>(
+    /// Depending on the cfg add a BlocksProcessorClientBidObserver and/or a true value pusher.
+    async fn create_bid_observer(
         &self,
-        provider: P,
-        cancellation_token: CancellationToken,
-    ) -> eyre::Result<(
-        Box<dyn UnfinishedBlockBuildingSinkFactory>,
-        Vec<MevBoostRelaySlotInfoProvider>,
-        Arc<dyn BiddingServiceWinControl>,
-    )>
-    where
-        P: StateProviderFactory + Clone + 'static,
-    {
+        cancellation_token: &CancellationToken,
+    ) -> eyre::Result<Box<dyn BidObserver + Send + Sync>> {
         let block_processor_key = if let Some(key_registration_url) = &self.key_registration_url {
             if self.blocks_processor_url.is_none() {
                 return Self::bail_blocks_processor_url_not_set();
@@ -326,45 +319,6 @@ impl FlashbotsConfig {
             None
         };
 
-        let bid_observer =
-            self.create_bid_observer(block_processor_key.clone(), &cancellation_token)?;
-
-        let (sink_sealed_factory, slot_info_provider) = self
-            .l1_config
-            .create_relays_sealed_sink_factory(self.base_config.chain_spec()?, bid_observer)?;
-
-        // BlockSealingBidderFactory
-        let (wallet_balance_watcher, wallet_history) = WalletBalanceWatcher::new(
-            provider,
-            self.base_config.coinbase_signer()?.address,
-            WALLET_INIT_HISTORY_SIZE,
-        )?;
-        let bid_value_source = self.create_bid_value_source(cancellation_token.clone())?;
-        let bidding_service: Box<dyn BiddingService> = self
-            .create_bidding_service(&wallet_history, cancellation_token.clone())
-            .await?;
-        let bidding_service_win_control = bidding_service.win_control();
-
-        let sink_factory = Box::new(BlockSealingBidderFactory::new(
-            bidding_service,
-            sink_sealed_factory,
-            bid_value_source.clone(),
-            wallet_balance_watcher,
-        ));
-
-        Ok((
-            sink_factory,
-            slot_info_provider,
-            bidding_service_win_control,
-        ))
-    }
-
-    /// Depending on the cfg add a BlocksProcessorClientBidObserver and/or a true value pusher.
-    fn create_bid_observer(
-        &self,
-        block_processor_key: Option<PrivateKeySigner>,
-        cancellation_token: &CancellationToken,
-    ) -> eyre::Result<Box<dyn BidObserver + Send + Sync>> {
         let mut bid_observer_multiplexer = BidObserverMultiplexer::default();
         if let Some(bid_observer) =
             self.create_block_processor_client(block_processor_key.clone())?
@@ -414,38 +368,6 @@ impl FlashbotsConfig {
             )?)))
         } else {
             Ok(None)
-        }
-    }
-
-    fn create_bid_value_source(
-        &self,
-        cancellation_token: CancellationToken,
-    ) -> eyre::Result<Arc<dyn BidValueSource + Send + Sync>> {
-        if let (Some(top_bid_ws_url), Some(top_bid_ws_basic_auth)) =
-            (&self.top_bid_ws_url, &self.top_bid_ws_basic_auth)
-        {
-            let ws_url = top_bid_ws_url.value().context("top_bid_ws_url")?;
-            let ws_auth = top_bid_ws_basic_auth
-                .value()
-                .context("top_bid_ws_basic_auth")?;
-            let connector = Arc::new(BestBidWSConnector::new(&ws_url, &ws_auth)?);
-            let connector_clone = connector.clone();
-
-            let watchdog_sender = match self.base_config().watchdog_timeout() {
-                Some(duration) => spawn_watchdog_thread(duration, "got bid source".to_string())?,
-                None => {
-                    eyre::bail!("Watchdog not enabled. Needed for bid source");
-                }
-            };
-            tokio::spawn(async move {
-                connector_clone
-                    .run_ws_stream(watchdog_sender, cancellation_token)
-                    .await
-            });
-            Ok(connector)
-        } else {
-            error!("No BidValueSource configured, using NullBidValueSource");
-            Ok(Arc::new(NullBidValueSource {}))
         }
     }
 
