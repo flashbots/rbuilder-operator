@@ -5,7 +5,8 @@ ENV BUILD_PROFILE=$BUILD_PROFILE
 
 RUN apt-get update && apt-get install -y \
     libclang-dev=1:11.0-51+nmu5 \
-    protobuf-compiler=3.12.4-1+deb11u1
+    protobuf-compiler=3.12.4-1+deb11u1 \
+    cmake
 
 # Clone the repository at the specific branch
 WORKDIR /app
