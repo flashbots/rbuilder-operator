@@ -8,6 +8,7 @@ use http::StatusCode;
 use jsonrpsee::RpcModule;
 use rbuilder::building::builders::parallel_builder::parallel_build_backtest;
 use rbuilder::building::order_priority::{FullProfitInfoGetter, NonMempoolProfitInfoGetter};
+use rbuilder::building::PartialBlockExecutionTracer;
 use rbuilder::live_builder::base_config::EnvOrValue;
 use rbuilder::live_builder::block_output::bid_observer::BidObserver;
 use rbuilder::live_builder::block_output::bid_observer_multiplexer::BidObserverMultiplexer;
@@ -181,10 +182,14 @@ impl LiveBuilderConfig for FlashbotsConfig {
     }
 
     /// @Pending fix this ugly copy/paste
-    fn build_backtest_block<P>(
+    fn build_backtest_block<
+        P,
+        PartialBlockExecutionTracerType: PartialBlockExecutionTracer + Clone + Send + Sync + 'static,
+    >(
         &self,
         building_algorithm_name: &str,
         input: BacktestSimulateBlockInput<'_, P>,
+        partial_block_execution_tracer: PartialBlockExecutionTracerType,
     ) -> eyre::Result<Block>
     where
         P: StateProviderFactory + Clone + 'static,
@@ -193,11 +198,17 @@ impl LiveBuilderConfig for FlashbotsConfig {
         match builder_cfg.builder {
             SpecificBuilderConfig::OrderingBuilder(config) => {
                 if config.ignore_mempool_profit_on_bundles {
-                    build_backtest_block_ordering_builder::<P, NonMempoolProfitInfoGetter>(
-                        config, input,
-                    )
+                    build_backtest_block_ordering_builder::<
+                        P,
+                        NonMempoolProfitInfoGetter,
+                        PartialBlockExecutionTracerType,
+                    >(config, input, partial_block_execution_tracer)
                 } else {
-                    build_backtest_block_ordering_builder::<P, FullProfitInfoGetter>(config, input)
+                    build_backtest_block_ordering_builder::<
+                        P,
+                        FullProfitInfoGetter,
+                        PartialBlockExecutionTracerType,
+                    >(config, input, partial_block_execution_tracer)
                 }
             }
             SpecificBuilderConfig::ParallelBuilder(config) => {
