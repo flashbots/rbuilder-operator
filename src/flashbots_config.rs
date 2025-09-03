@@ -125,6 +125,10 @@ impl LiveBuilderConfig for FlashbotsConfig {
     where
         P: StateProviderFactory + Clone + 'static,
     {
+        if self.l1_config.scraped_bids_publisher_url.is_none() {
+            eyre::bail!("scraped_bids_publisher_url is not set");
+        }
+
         let bidding_service_ipc_path = self.bidding_service_ipc_path.clone();
         // Create the bidding service factory
         let bidding_service_factory = |landed_blocks: &[LandedBlockInfo]| {
