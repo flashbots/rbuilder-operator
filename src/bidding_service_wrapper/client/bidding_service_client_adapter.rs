@@ -1,23 +1,23 @@
 use alloy_primitives::U256;
 use rbuilder::{
-    live_builder::block_output::bidding::{
-        block_bid_with_stats::BlockBidWithStats,
-        interfaces::{
-            BiddingServiceWinControl, BlockBidWithStatsObs, LandedBlockInfo as RealLandedBlockInfo,
-            SlotBlockId,
-        },
+    live_builder::block_output::bidding_service_interface::{
+        BiddingService, BlockId, BlockSealInterfaceForSlotBidder,
+        LandedBlockInfo as RealLandedBlockInfo, ScrapedRelayBlockBidWithStats, SlotBidder,
+        SlotBidderSealBidCommand, SlotBlockId,
     },
     utils::{build_info::Version, timestamp_us_to_offset_datetime},
 };
 use std::{
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicU64, Ordering},
         Arc,
     },
 };
+use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
+use tokio_util::sync::CancellationToken;
 use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
 use tracing::error;
@@ -29,9 +29,6 @@ use crate::{
         CreateSlotBidderParams, DestroySlotBidderParams, Empty, LandedBlocksParams,
         MustWinBlockParams, NewBlockParams, UpdateNewBidParams,
     },
-    block_descriptor_bidding::traits::{
-        Bid, BidMaker, BiddingService, BlockId, UnfinishedBlockBuildingSink,
-    },
     metrics::set_bidding_service_version,
 };
 
@@ -39,9 +36,8 @@ use super::unfinished_block_building_sink_client::UnfinishedBlockBuildingSinkCli
 
 pub struct CreateSlotBidderCommandData {
     params: CreateSlotBidderParams,
-    bid_maker: Box<dyn BidMaker + Send + Sync>,
+    block_seal_handle: Box<dyn BlockSealInterfaceForSlotBidder + Send + Sync>,
     cancel: tokio_util::sync::CancellationToken,
-    can_use_suggested_fee_recipient_as_coinbase: Arc<AtomicBool>,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -64,7 +60,6 @@ pub enum BiddingServiceClientCommand {
 #[derive(Debug)]
 pub struct BiddingServiceClientAdapter {
     commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
-    win_control: Arc<dyn BiddingServiceWinControl>,
     last_session_id: AtomicU64,
 }
 
@@ -87,12 +82,8 @@ impl BiddingServiceClientAdapter {
         landed_blocks_history: &[RealLandedBlockInfo],
     ) -> Result<Self> {
         let commands_sender = Self::init_sender_task(uds_path, landed_blocks_history).await?;
-        let win_control = Arc::new(BiddingServiceWinControlAdapter {
-            commands_sender: commands_sender.clone(),
-        });
         Ok(Self {
             commands_sender,
-            win_control,
             last_session_id: AtomicU64::new(0),
         })
     }
@@ -190,28 +181,37 @@ impl BiddingServiceClientAdapter {
         {
             Ok(response) => {
                 let mut stream = response.into_inner();
+
                 tokio::spawn(async move {
                     loop {
                         tokio::select! {
-                            _ = create_slot_bidder_data.cancel.cancelled() => {
-                                return;
-                            }
-                            callback = stream.next() => {
-                                if let Some(Ok(callback)) = callback {
-                                    if let Some(bid) = callback.bid {
-                                        let payout_tx_value = Self::parse_option_u256(bid.payout_tx_value);
-                                        let seen_competition_bid = Self::parse_option_u256(bid.seen_competition_bid);
-                                        let trigger_creation_time = bid.trigger_creation_time_us.map(timestamp_us_to_offset_datetime);
-                                        create_slot_bidder_data.bid_maker.send_bid(Bid{block_id:BlockId(bid.block_id),payout_tx_value,seen_competition_bid, trigger_creation_time });
-                                    } else if let Some(can_use_suggested_fee_recipient_as_coinbase_change) = callback.can_use_suggested_fee_recipient_as_coinbase_change {
-                                        create_slot_bidder_data.can_use_suggested_fee_recipient_as_coinbase.store(can_use_suggested_fee_recipient_as_coinbase_change,std::sync::atomic::Ordering::SeqCst);
-                                    }
-                                }
-                                else {
+                                _ = create_slot_bidder_data.cancel.cancelled() => {
                                     return;
                                 }
+                                callback = stream.next() => {
+                                    if let Some(Ok(callback)) = callback {
+                                        if let Some(bid) = callback.bid {
+                                            let payout_tx_value = Self::parse_option_u256(bid.payout_tx_value);
+                                            let seen_competition_bid = Self::parse_option_u256(bid.seen_competition_bid);
+                                            let trigger_creation_time = bid.trigger_creation_time_us.map(timestamp_us_to_offset_datetime);
+
+                        let seal_command = SlotBidderSealBidCommand {
+                        block_id: BlockId(bid.block_id),
+                        payout_tx_value: payout_tx_value,
+                        seen_competition_bid: seen_competition_bid,
+                        trigger_creation_time: trigger_creation_time,
+                        };
+                        create_slot_bidder_data.block_seal_handle.seal_bid(seal_command);
+                                        } else if let Some(can_use_suggested_fee_recipient_as_coinbase_change) = callback.can_use_suggested_fee_recipient_as_coinbase_change {
+
+                        create_slot_bidder_data.block_seal_handle.set_can_use_suggested_fee_recipient_as_coinbase(can_use_suggested_fee_recipient_as_coinbase_change);
+                                        }
+                                    }
+                                    else {
+                                        return;
+                                    }
+                                }
                             }
-                        }
                     }
                 });
             }
@@ -231,45 +231,45 @@ impl BiddingServiceClientAdapter {
             false
         }
     }
+
+    pub async fn must_win_block(&self, block: u64) {
+        let _ = self
+            .commands_sender
+            .send(BiddingServiceClientCommand::MustWinBlock(
+                MustWinBlockParams { block },
+            ));
+    }
 }
 
 impl BiddingService for BiddingServiceClientAdapter {
     fn create_slot_bidder(
         &self,
         slot_block_id: SlotBlockId,
-        slot_timestamp: time::OffsetDateTime,
-        bid_maker: Box<dyn BidMaker + Send + Sync>,
-        cancel: tokio_util::sync::CancellationToken,
-    ) -> Arc<dyn UnfinishedBlockBuildingSink> {
+        slot_timestamp: OffsetDateTime,
+        block_seal_handle: Box<dyn BlockSealInterfaceForSlotBidder + Send + Sync>,
+        cancel: CancellationToken,
+    ) -> Arc<dyn SlotBidder> {
         // This default will be immediately changed by a callback.
-        let can_use_suggested_fee_recipient_as_coinbase = Arc::new(AtomicBool::new(false));
         let session_id = self.new_session_id();
         let _ = self
             .commands_sender
             .send(BiddingServiceClientCommand::CreateSlotBidder(
                 CreateSlotBidderCommandData {
                     params: CreateSlotBidderParams {
-                        block: slot_block_id.block(),
-                        slot: slot_block_id.slot(),
-                        parent_hash: real2rpc_block_hash(*slot_block_id.parent_block_hash()),
+                        block: slot_block_id.block,
+                        slot: slot_block_id.slot,
+                        parent_hash: real2rpc_block_hash(slot_block_id.parent_block_hash),
                         session_id,
                         slot_timestamp: slot_timestamp.unix_timestamp(),
                     },
-                    bid_maker,
+                    block_seal_handle,
                     cancel,
-                    can_use_suggested_fee_recipient_as_coinbase:
-                        can_use_suggested_fee_recipient_as_coinbase.clone(),
                 },
             ));
         Arc::new(UnfinishedBlockBuildingSinkClient::new(
             session_id,
             self.commands_sender.clone(),
-            can_use_suggested_fee_recipient_as_coinbase,
         ))
-    }
-
-    fn win_control(&self) -> Arc<dyn BiddingServiceWinControl> {
-        self.win_control.clone()
     }
 
     fn update_new_landed_blocks_detected(&self, landed_blocks: &[RealLandedBlockInfo]) {
@@ -291,28 +291,12 @@ impl BiddingService for BiddingServiceClientAdapter {
             .commands_sender
             .send(BiddingServiceClientCommand::UpdateFailedReadingNewLandedBlocks);
     }
-}
 
-impl BlockBidWithStatsObs for BiddingServiceClientAdapter {
-    fn update_new_bid(&self, bid_with_stats: BlockBidWithStats) {
+    fn observe_relay_bids(&self, bid_with_stats: ScrapedRelayBlockBidWithStats) {
         let _ = self
             .commands_sender
             .send(BiddingServiceClientCommand::UpdateNewBid(
                 real2rpc_block_bid(bid_with_stats),
-            ));
-    }
-}
-#[derive(Debug)]
-struct BiddingServiceWinControlAdapter {
-    commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
-}
-
-impl BiddingServiceWinControl for BiddingServiceWinControlAdapter {
-    fn must_win_block(&self, block: u64) {
-        let _ = self
-            .commands_sender
-            .send(BiddingServiceClientCommand::MustWinBlock(
-                MustWinBlockParams { block },
             ));
     }
 }

@@ -3,10 +3,10 @@ use crate::bidding_service_wrapper::{LandedBlockInfo as RPCLandedBlockInfo, Upda
 
 use alloy_primitives::{Address, BlockHash, U256};
 use alloy_rpc_types_beacon::BlsPublicKey;
-use bid_scraper::types::BlockBid;
+use bid_scraper::types::ScrapedRelayBlockBid;
 use rbuilder::{
-    live_builder::block_output::bidding::{
-        block_bid_with_stats::BlockBidWithStats, interfaces::LandedBlockInfo as RealLandedBlockInfo,
+    live_builder::block_output::bidding_service_interface::{
+        LandedBlockInfo as RealLandedBlockInfo, ScrapedRelayBlockBidWithStats,
     },
     utils::{offset_datetime_to_timestamp_us, timestamp_us_to_offset_datetime},
 };
@@ -70,8 +70,8 @@ pub fn rpc2real_block_hash(v: &Vec<u8>) -> Result<BlockHash, Status> {
     BlockHash::try_from(v.as_slice()).map_err(|_| Status::invalid_argument("rpc BlockHash error"))
 }
 
-pub fn real2rpc_block_bid(bid_with_stats: BlockBidWithStats) -> UpdateNewBidParams {
-    let creation_time_us = offset_datetime_to_timestamp_us(bid_with_stats.creation_time());
+pub fn real2rpc_block_bid(bid_with_stats: ScrapedRelayBlockBidWithStats) -> UpdateNewBidParams {
+    let creation_time_us = offset_datetime_to_timestamp_us(bid_with_stats.creation_time);
     let bid = bid_with_stats.bid;
     UpdateNewBidParams {
         seen_time: bid.seen_time,
@@ -101,9 +101,11 @@ pub fn real2rpc_block_bid(bid_with_stats: BlockBidWithStats) -> UpdateNewBidPara
 }
 
 #[allow(clippy::result_large_err)]
-pub fn rpc2real_block_bid(bid: UpdateNewBidParams) -> Result<BlockBidWithStats, Status> {
-    Ok(BlockBidWithStats::new_for_deserialization(
-        BlockBid {
+pub fn rpc2real_block_bid(
+    bid: UpdateNewBidParams,
+) -> Result<ScrapedRelayBlockBidWithStats, Status> {
+    Ok(ScrapedRelayBlockBidWithStats::new_for_deserialization(
+        ScrapedRelayBlockBid {
             seen_time: bid.seen_time,
             publisher_name: bid.publisher_name,
             publisher_type: rpc2real_publisher_type(bid.publisher_type)?,
@@ -170,18 +172,20 @@ pub fn rpc2real_publisher_type(ty: i32) -> Result<bid_scraper::types::PublisherT
 mod tests {
     use alloy_primitives::{address, BlockHash, U256};
     use alloy_rpc_types_beacon::BlsPublicKey;
-    use bid_scraper::types::BlockBid;
+    use bid_scraper::types::ScrapedRelayBlockBid;
     use rbuilder::{
-        live_builder::block_output::bidding::block_bid_with_stats::BlockBidWithStats,
+        live_builder::block_output::bidding_service_interface::ScrapedRelayBlockBidWithStats,
         utils::timestamp_ms_to_offset_datetime,
     };
     use std::str::FromStr;
 
     use crate::bidding_service_wrapper::conversion::{real2rpc_block_bid, rpc2real_block_bid};
 
-    fn test_roundtrip(bid: BlockBid) {
-        let bid_with_stats =
-            BlockBidWithStats::new_for_deserialization(bid, timestamp_ms_to_offset_datetime(1000));
+    fn test_roundtrip(bid: ScrapedRelayBlockBid) {
+        let bid_with_stats = ScrapedRelayBlockBidWithStats::new_for_deserialization(
+            bid,
+            timestamp_ms_to_offset_datetime(1000),
+        );
         let rpc_bid = real2rpc_block_bid(bid_with_stats.clone());
         assert_eq!(rpc2real_block_bid(rpc_bid).unwrap(), bid_with_stats);
     }
@@ -189,7 +193,7 @@ mod tests {
     #[test]
     /// Test all with all options as Some
     fn test_block_bid_conversion_some() {
-        let bid = BlockBid {
+        let bid = ScrapedRelayBlockBid {
             seen_time: 1234.0,
             publisher_name: "Mafalda".to_owned(),
             publisher_type: bid_scraper::types::PublisherType::BloxrouteWs,
@@ -220,7 +224,7 @@ mod tests {
 
     /// Test all with all options as None
     fn test_block_bid_conversion_none() {
-        let bid = BlockBid {
+        let bid = ScrapedRelayBlockBid {
             seen_time: 1234.0,
             publisher_name: "".to_owned(),
             publisher_type: bid_scraper::types::PublisherType::BloxrouteWs,
