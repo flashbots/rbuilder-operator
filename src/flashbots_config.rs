@@ -150,7 +150,7 @@ impl LiveBuilderConfig for FlashbotsConfig {
         };
         let bid_observer = self.create_bid_observer(&cancellation_token).await?;
 
-        let (sink_factory, slot_info_provider, bidding_service_win_control) =
+        let (sink_factory, slot_info_provider, adjustment_fee_payers, bidding_service_win_control) =
             create_sink_factory_and_relays(
                 &self.base_config,
                 &self.l1_config,
@@ -167,6 +167,7 @@ impl LiveBuilderConfig for FlashbotsConfig {
             provider,
             sink_factory,
             slot_info_provider,
+            adjustment_fee_payers,
             cancellation_token,
         )
         .await?;
