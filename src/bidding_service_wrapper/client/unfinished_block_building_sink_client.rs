@@ -38,7 +38,7 @@ impl SlotBidder for UnfinishedBlockBuildingSinkClient {
             .send(BiddingServiceClientCommand::NewBlock(NewBlockParams {
                 session_id: self.session_id,
                 true_block_value: block_descriptor.true_block_value.as_limbs().to_vec(),
-                can_add_payout_tx: block_descriptor.can_add_payout_tx,
+                can_add_payout_tx: true,
                 block_id: block_descriptor.id.0,
                 creation_time_us: offset_datetime_to_timestamp_us(block_descriptor.creation_time),
             }));

@@ -20,7 +20,7 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
-use tracing::error;
+use tracing::{error, trace, warn};
 
 use crate::{
     bidding_service_wrapper::{
@@ -194,6 +194,12 @@ impl BiddingServiceClientAdapter {
                                             let payout_tx_value = Self::parse_option_u256(bid.payout_tx_value);
                                             let seen_competition_bid = Self::parse_option_u256(bid.seen_competition_bid);
                                             let trigger_creation_time = bid.trigger_creation_time_us.map(timestamp_us_to_offset_datetime);
+                        let payout_tx_value = if let Some(payout_tx_value) = payout_tx_value {
+                        payout_tx_value
+                        } else {
+                        warn!("payout_tx_value is None");
+                        continue;
+                        };
 
                         let seal_command = SlotBidderSealBidCommand {
                         block_id: BlockId(bid.block_id),
@@ -202,9 +208,10 @@ impl BiddingServiceClientAdapter {
                         trigger_creation_time: trigger_creation_time,
                         };
                         create_slot_bidder_data.block_seal_handle.seal_bid(seal_command);
-                                        } else if let Some(can_use_suggested_fee_recipient_as_coinbase_change) = callback.can_use_suggested_fee_recipient_as_coinbase_change {
+                                        } else if let Some(value) = callback.can_use_suggested_fee_recipient_as_coinbase_change {
 
-                        create_slot_bidder_data.block_seal_handle.set_can_use_suggested_fee_recipient_as_coinbase(can_use_suggested_fee_recipient_as_coinbase_change);
+                        // do nothing as can_use_suggested_fee_recipient_as_coinbase_change is not supported
+                        trace!(value, "Got can_use_suggested_fee_recipient_as_coinbase_change from bidding service");
                                         }
                                     }
                                     else {

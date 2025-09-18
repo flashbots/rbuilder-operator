@@ -135,15 +135,16 @@ impl LiveBuilderConfig for FlashbotsConfig {
 
         let bid_observer = self.create_bid_observer(&cancellation_token).await?;
 
-        let (sink_factory, slot_info_provider) = create_sink_factory_and_relays(
-            &self.base_config,
-            &self.l1_config,
-            wallet_balance_watcher,
-            bid_observer,
-            bidding_service.clone(),
-            cancellation_token.clone(),
-        )
-        .await?;
+        let (sink_factory, slot_info_provider, adjustment_fee_payers) =
+            create_sink_factory_and_relays(
+                &self.base_config,
+                &self.l1_config,
+                wallet_balance_watcher,
+                bid_observer,
+                bidding_service.clone(),
+                cancellation_token.clone(),
+            )
+            .await?;
 
         let live_builder = create_builder_from_sink(
             &self.base_config,
