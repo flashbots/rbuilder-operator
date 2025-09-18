@@ -203,9 +203,9 @@ impl BiddingServiceClientAdapter {
 
                         let seal_command = SlotBidderSealBidCommand {
                         block_id: BlockId(bid.block_id),
-                        payout_tx_value: payout_tx_value,
-                        seen_competition_bid: seen_competition_bid,
-                        trigger_creation_time: trigger_creation_time,
+                        payout_tx_value,
+                        seen_competition_bid,
+                        trigger_creation_time,
                         };
                         create_slot_bidder_data.block_seal_handle.seal_bid(seal_command);
                                         } else if let Some(value) = callback.can_use_suggested_fee_recipient_as_coinbase_change {

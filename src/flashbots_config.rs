@@ -429,7 +429,7 @@ impl BidObserver for RbuilderOperatorBidObserver {
         builder_name: String,
         best_bid_value: U256,
     ) {
-        self.block_processor.as_ref().map(|p| {
+        if let Some(p) = self.block_processor.as_ref() {
             p.block_submitted(
                 slot_data,
                 sealed_block,
@@ -438,8 +438,8 @@ impl BidObserver for RbuilderOperatorBidObserver {
                 builder_name.clone(),
                 best_bid_value,
             )
-        });
-        self.tbv_pusher.as_ref().map(|p| {
+        }
+        if let Some(p) = self.tbv_pusher.as_ref() {
             p.block_submitted(
                 slot_data,
                 sealed_block,
@@ -448,7 +448,7 @@ impl BidObserver for RbuilderOperatorBidObserver {
                 builder_name,
                 best_bid_value,
             )
-        });
+        }
     }
 }
 
