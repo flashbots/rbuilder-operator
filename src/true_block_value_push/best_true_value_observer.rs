@@ -1,7 +1,9 @@
 use alloy_signer_local::PrivateKeySigner;
 use rbuilder::{
     building::BuiltBlockTrace,
-    live_builder::{block_output::bid_observer::BidObserver, payload_events::MevBoostSlotData},
+    live_builder::{
+        block_output::bidding_service_interface::BidObserver, payload_events::MevBoostSlotData,
+    },
     mev_boost::submission::SubmitBlockRequest,
 };
 use redis::RedisError;
