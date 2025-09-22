@@ -59,13 +59,13 @@ parking_lot = { version = "0.12.3" }
 derivative = "2.2.0"
 
 #rbuilder = {path="./../rbuilder/crates/rbuilder"}
-rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"}
+rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "634bc483f24aa9d5ede591ed1800638d4dccb3af"}
 
 #metrics_macros = {path="./../rbuilder/crates/rbuilder/src/telemetry/metrics_macros"}
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"}
+metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "634bc483f24aa9d5ede591ed1800638d4dccb3af"}
 
 #bid-scraper = {path="./../rbuilder/crates/bid-scraper"}
-bid-scraper = { git = "https://github.com/flashbots/rbuilder.git", rev = "4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"}
+bid-scraper = { git = "https://github.com/flashbots/rbuilder.git", rev = "634bc483f24aa9d5ede591ed1800638d4dccb3af"}
 
 
 tokio-tungstenite = "0.26.2"

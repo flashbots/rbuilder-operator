@@ -2013,7 +2013,7 @@ dependencies = [
 [[package]]
 name = "bid-scraper"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=4a75a03ead8a63146d029e3a10e3f0a3d4f8979e#4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
 dependencies = [
  "alloy-primitives 1.3.1",
  "alloy-provider",
@@ -3930,7 +3930,7 @@ dependencies = [
 [[package]]
 name = "eth-sparse-mpt"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=4a75a03ead8a63146d029e3a10e3f0a3d4f8979e#4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
 dependencies = [
  "alloy-primitives 1.3.1",
  "alloy-rlp",
@@ -6884,7 +6884,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=4a75a03ead8a63146d029e3a10e3f0a3d4f8979e#4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
 dependencies = [
  "proc-macro2 1.0.95",
  "quote 1.0.40",
@@ -9061,7 +9061,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=4a75a03ead8a63146d029e3a10e3f0a3d4f8979e#4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -9113,7 +9113,6 @@ dependencies = [
  "mev-share-sse",
  "mockall",
  "parking_lot",
- "primitive-types",
  "priority-queue",
  "prometheus",
  "prost 0.13.5",
@@ -14018,7 +14017,7 @@ dependencies = [
 [[package]]
 name = "sysperf"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=4a75a03ead8a63146d029e3a10e3f0a3d4f8979e#4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
 dependencies = [
  "alloy-primitives 1.3.1",
  "num_cpus",
@@ -14140,7 +14139,7 @@ checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=4a75a03ead8a63146d029e3a10e3f0a3d4f8979e#4a75a03ead8a63146d029e3a10e3f0a3d4f8979e"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
 dependencies = [
  "proc-macro2 1.0.95",
  "quote 1.0.40",
