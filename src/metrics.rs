@@ -3,12 +3,8 @@
 use ctor::ctor;
 use lazy_static::lazy_static;
 use metrics_macros::register_metrics;
-use prometheus::{HistogramOpts, HistogramVec, IntCounterVec, IntGaugeVec, Opts};
-use rbuilder::{
-    telemetry::{linear_buckets_range, REGISTRY},
-    utils::build_info::Version,
-};
-use time::Duration;
+use prometheus::{IntCounterVec, IntGaugeVec, Opts};
+use rbuilder::{telemetry::REGISTRY, utils::build_info::Version};
 
 register_metrics! {
     pub static BLOCK_API_ERRORS: IntCounterVec = IntCounterVec::new(
@@ -23,19 +19,6 @@ register_metrics! {
     )
     .unwrap();
 
-    pub static TRIGGER_TO_BID_ROUND_TRIP_TIME: HistogramVec = HistogramVec::new(
-        HistogramOpts::new("trigger_to_bid_round_trip_time_us", "Time (in microseconds) it takes from a trigger (new block or competition bid) to get a new bid to make")
-            .buckets(linear_buckets_range(50.0, 4000.0, 200)),
-        &[]
-    )
-    .unwrap();
-
-}
-
-pub fn add_trigger_to_bid_round_trip_time(duration: Duration) {
-    TRIGGER_TO_BID_ROUND_TRIP_TIME
-        .with_label_values(&[])
-        .observe(duration.as_seconds_f64() * 1_000_000.0);
 }
 
 pub fn inc_submit_block_errors() {
