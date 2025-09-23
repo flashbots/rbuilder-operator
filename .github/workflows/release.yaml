@@ -16,6 +16,11 @@ on:
         required: false
         type: boolean
         default: true
+      build-deb:
+        description: 'Build Debian Packages'
+        required: false
+        type: boolean
+        default: true
       draft-release:
         description: 'Draft Release'
         required: false
@@ -29,6 +34,9 @@ on:
           - '24.04'
           - '22.04'
         default: '24.04'
+
+env:
+  DEB_SUPPORTED_TARGETS: x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 
 jobs:
   extract-version:
@@ -66,6 +74,7 @@ jobs:
     runs-on: ${{ matrix.configs.runner }}
     container:
       image: ubuntu:${{ github.event.inputs.ubuntu-version || '24.04' }}
+    continue-on-error: ${{ matrix.configs.allow_fail }}
     env:
       VERSION: ${{ needs.extract-version.outputs.VERSION }}
       UBUNTU_VERSION: ${{ github.event.inputs.ubuntu-version || '24.04' }}
@@ -73,10 +82,21 @@ jobs:
       contents: write
       packages: write
     strategy:
+      fail-fast: false
       matrix:
         configs:
           - target: x86_64-unknown-linux-gnu
             runner: warp-ubuntu-latest-x64-16x
+            profile: release
+            allow_fail: false
+          - target: x86_64-unknown-linux-gnu
+            runner: warp-ubuntu-latest-x64-16x
+            profile: reproducible
+            allow_fail: false
+          - target: aarch64-unknown-linux-gnu
+            runner: warp-ubuntu-latest-x64-16x
+            profile: release
+            allow_fail: true
 
     steps:
       - name: Install dependencies
@@ -98,20 +118,50 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare filename
-        run: echo "OUTPUT_FILENAME=rbuilder-${VERSION}-${{ matrix.configs.target }}-ubuntu${UBUNTU_VERSION}" >> $GITHUB_ENV
+        run: echo "OUTPUT_FILENAME=rbuilder-operator-${VERSION}-${{ matrix.configs.target }}-${{ matrix.configs.profile }}-ubuntu${UBUNTU_VERSION}" >> $GITHUB_ENV
 
       - name: Build binary
         run: |
           git config --global --add safe.directory "$(pwd)"
           . $HOME/.cargo/env
-          make build-reproducible TARGET=${{ matrix.configs.target }}
-          ./target/${{ matrix.configs.target }}/release/rbuilder version
+          if [[ "${{ matrix.configs.profile }}" == "reproducible" ]]; then
+            make build-reproducible TARGET=${{ matrix.configs.target }}
+          else
+            make build TARGET=${{ matrix.configs.target }} PROFILE=${{ matrix.configs.profile }}
+          fi
+          ./target/${{ matrix.configs.target }}/${{ matrix.configs.profile }}/rbuilder version
+
+      - name: Build Debian package
+        if: ${{ (github.event.inputs.build-deb == 'true' || github.event_name == 'push') && contains(env.DEB_SUPPORTED_TARGETS, matrix.configs.target) }}
+        run: make build-deb-${{ matrix.configs.target }} PROFILE=${{ matrix.configs.profile }} VERSION=${{ needs.extract-version.outputs.VERSION }}
+
+      - name: Move artifacts
+        run: |
+          mkdir artifacts
+          # Handle reproducible builds which always target x86_64-unknown-linux-gnu
+          if [[ "${{ matrix.configs.profile }}" == "reproducible" ]]; then
+            mv "target/x86_64-unknown-linux-gnu/${{ matrix.configs.profile }}/rbuilder" ./artifacts
+          else
+            mv "target/${{ matrix.configs.target }}/${{ matrix.configs.profile }}/rbuilder" ./artifacts
+          fi
+
+          # Move deb packages if they exist
+          if [[ "${{ env.DEB_SUPPORTED_TARGETS }}" == *"${{ matrix.configs.target }}"* && -f "target/${{ matrix.configs.target }}/${{ matrix.configs.profile }}/rbuilder-operator-${{ needs.extract-version.outputs.VERSION }}-${{ matrix.configs.target }}-${{ matrix.configs.profile }}.deb" ]]; then
+            mv "target/${{ matrix.configs.target }}/${{ matrix.configs.profile }}/rbuilder-operator-${{ needs.extract-version.outputs.VERSION }}-${{ matrix.configs.target }}-${{ matrix.configs.profile }}.deb" ./artifacts
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.OUTPUT_FILENAME }}
-          path: target/${{ matrix.configs.target }}/release/rbuilder
+          path: artifacts/rbuilder
+
+      - name: Upload Debian package
+        if: ${{ (github.event.inputs.build-deb == 'true' || github.event_name == 'push') && contains(env.DEB_SUPPORTED_TARGETS, matrix.configs.target) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbuilder-operator-${{ needs.extract-version.outputs.VERSION }}-${{ matrix.configs.target }}-${{ matrix.configs.profile }}.deb
+          path: artifacts/rbuilder-operator-${{ needs.extract-version.outputs.VERSION }}-${{ matrix.configs.target }}-${{ matrix.configs.profile }}.deb
 
   build-docker:
     name: Build and publish Docker image
@@ -193,12 +243,72 @@ jobs:
           for file in *; do sha256sum "$file" >> sha256sums.txt; done;
           cat sha256sums.txt
 
+      - name: Generate release notes with deb packages
+        working-directory: artifacts
+        run: |
+          echo "## Rbuilder Operator Release ${{ env.VERSION }}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "### Binary Downloads" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "| Platform | Architecture | Binary | Debian Package |" >> release-notes.md
+          echo "|----------|--------------|--------|----------------|" >> release-notes.md
+
+          # List binaries and deb packages
+          for binary in rbuilder-operator-*x86_64-unknown-linux-gnu-*-ubuntu*; do
+            if [[ -f "$binary" ]]; then
+              arch="x86_64"
+              if [[ -f "rbuilder-operator-${{ env.VERSION }}-x86_64-unknown-linux-gnu-release.deb" ]]; then
+                deb_link="[.deb](https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/rbuilder-operator-${{ env.VERSION }}-x86_64-unknown-linux-gnu-release.deb)"
+              else
+                deb_link="-"
+              fi
+              echo "| Linux | $arch | [$binary](https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/$binary) | $deb_link |" >> release-notes.md
+            fi
+          done
+
+          for binary in rbuilder-operator-*aarch64-unknown-linux-gnu-*-ubuntu*; do
+            if [[ -f "$binary" ]]; then
+              arch="aarch64"
+              if [[ -f "rbuilder-operator-${{ env.VERSION }}-aarch64-unknown-linux-gnu-release.deb" ]]; then
+                deb_link="[.deb](https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/rbuilder-operator-${{ env.VERSION }}-aarch64-unknown-linux-gnu-release.deb)"
+              else
+                deb_link="-"
+              fi
+              echo "| Linux | $arch | [$binary](https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/$binary) | $deb_link |" >> release-notes.md
+            fi
+          done
+
+          echo "" >> release-notes.md
+          echo "### Installation" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "#### Debian/Ubuntu" >> release-notes.md
+          echo "\`\`\`bash" >> release-notes.md
+          echo "# Download and install the .deb package" >> release-notes.md
+          echo "wget https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/rbuilder-operator-${{ env.VERSION }}-x86_64-unknown-linux-gnu-release.deb" >> release-notes.md
+          echo "sudo dpkg -i rbuilder-operator-${{ env.VERSION }}-x86_64-unknown-linux-gnu-release.deb" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "# Enable and start the service" >> release-notes.md
+          echo "sudo systemctl enable rbuilder-operator" >> release-notes.md
+          echo "sudo systemctl start rbuilder-operator" >> release-notes.md
+          echo "\`\`\`" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "#### Manual Installation" >> release-notes.md
+          echo "\`\`\`bash" >> release-notes.md
+          echo "# Download the binary" >> release-notes.md
+          echo "wget https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/rbuilder-operator-${{ env.VERSION }}-x86_64-unknown-linux-gnu-release-ubuntu24.04" >> release-notes.md
+          echo "chmod +x rbuilder-operator-${{ env.VERSION }}-x86_64-unknown-linux-gnu-release-ubuntu24.04" >> release-notes.md
+          echo "sudo mv rbuilder-operator-${{ env.VERSION }}-x86_64-unknown-linux-gnu-release-ubuntu24.04 /usr/local/bin/rbuilder" >> release-notes.md
+          echo "\`\`\`" >> release-notes.md
+
+          cat release-notes.md
+
       - name: Create release draft
         uses: softprops/action-gh-release@v2.0.5
         id: create-release-draft
         with:
           draft: true
           files: artifacts/*
+          body_path: artifacts/release-notes.md
           generate_release_notes: true
           name: ${{ env.VERSION }}
           tag_name: ${{ env.VERSION }}

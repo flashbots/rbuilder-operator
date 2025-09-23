@@ -1,0 +1,14 @@
+[Unit]
+Description=Rbuilder Operator - Block building operator for MEV-Boost
+Documentation=https://github.com/flashbots/rbuilder-operator
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+Type=exec
+DynamicUser=yes
+StateDirectory=rbuilder-operator
+ExecStart=/usr/bin/rbuilder --config /etc/rbuilder-operator/config.toml
+
+[Install]
+WantedBy=multi-user.target
