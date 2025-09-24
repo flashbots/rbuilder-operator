@@ -80,6 +80,8 @@ message UpdateNewBidParams {
     optional uint64 gas_used = 15;
     optional bool optimistic_submission = 16;
     uint64 creation_time_us = 17; // For metrics
+    uint64 protocol_send_time_us = 18; // For metrics
+
 }
 
 message NewBlockParams{
@@ -88,6 +90,7 @@ message NewBlockParams{
     bool can_add_payout_tx = 3;
     uint64 block_id = 4;
     uint64 creation_time_us = 5;// For metrics
+    uint64 protocol_send_time_us = 6; // For metrics
 }
 
 message DestroySlotBidderParams {
@@ -126,6 +129,7 @@ message Bid {
     // Optional implicitly by allowing empty
     repeated uint64 seen_competition_bid = 3; // Array of 4 uint64
     optional uint64 trigger_creation_time_us = 4;
+    uint64 protocol_send_time_us = 5; // For metrics
 }    
 
 

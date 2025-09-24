@@ -5,7 +5,9 @@ use rbuilder::{
         LandedBlockInfo as RealLandedBlockInfo, ScrapedRelayBlockBidWithStats, SlotBidder,
         SlotBidderSealBidCommand, SlotBlockId,
     },
-    utils::{build_info::Version, timestamp_us_to_offset_datetime},
+    utils::{
+        build_info::Version, offset_datetime_to_timestamp_us, timestamp_us_to_offset_datetime,
+    },
 };
 use std::{
     path::PathBuf,
@@ -13,6 +15,7 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
+    time::{Duration, Instant},
 };
 use time::OffsetDateTime;
 use tokio::sync::mpsc;
@@ -40,7 +43,16 @@ pub struct CreateSlotBidderCommandData {
     cancel: tokio_util::sync::CancellationToken,
 }
 
+impl std::fmt::Debug for CreateSlotBidderCommandData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CreateSlotBidderCommandData")
+            .field("params", &self.params)
+            .finish()
+    }
+}
+
 #[allow(clippy::large_enum_variant)]
+#[derive(Debug)]
 pub enum BiddingServiceClientCommand {
     CreateSlotBidder(CreateSlotBidderCommandData),
     NewBlock(NewBlockParams),
@@ -128,21 +140,44 @@ impl BiddingServiceClientAdapter {
         // Spawn a task to execute received futures
         tokio::spawn(async move {
             while let Some(command) = rx.recv().await {
-                match command {
+                let now = Instant::now();
+                let command_name = match command {
                     BiddingServiceClientCommand::CreateSlotBidder(create_slot_data) => {
                         Self::create_slot_bidder(&mut client, create_slot_data).await;
+                        "CreateSlotBidder"
                     }
-                    BiddingServiceClientCommand::NewBlock(new_block_params) => {
+                    BiddingServiceClientCommand::NewBlock(mut new_block_params) => {
+                        let traveling_us =
+                            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc())
+                                - new_block_params.protocol_send_time_us;
+                        if traveling_us > 1000 {
+                            warn!(traveling_us, "DX NewBlock traveling time too long",);
+                        }
+                        new_block_params.protocol_send_time_us =
+                            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc());
                         Self::handle_error(client.new_block(new_block_params).await);
+                        "NewBlock"
                     }
-                    BiddingServiceClientCommand::UpdateNewBid(update_new_bid_params) => {
+                    BiddingServiceClientCommand::UpdateNewBid(mut update_new_bid_params) => {
+                        let traveling_us =
+                            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc())
+                                - update_new_bid_params.protocol_send_time_us;
+                        if traveling_us > 1000 {
+                            warn!(traveling_us, "DX UpdateNewBid traveling time too long",);
+                        }
+
+                        update_new_bid_params.protocol_send_time_us =
+                            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc());
                         Self::handle_error(client.update_new_bid(update_new_bid_params).await);
+                        "UpdateNewBid"
                     }
                     BiddingServiceClientCommand::MustWinBlock(must_win_block_params) => {
                         Self::handle_error(client.must_win_block(must_win_block_params).await);
+                        "MustWinBlock"
                     }
                     BiddingServiceClientCommand::UpdateNewLandedBlocksDetected(params) => {
                         Self::handle_error(client.update_new_landed_blocks_detected(params).await);
+                        "UpdateNewLandedBlocksDetected"
                     }
                     BiddingServiceClientCommand::UpdateFailedReadingNewLandedBlocks => {
                         Self::handle_error(
@@ -150,12 +185,22 @@ impl BiddingServiceClientAdapter {
                                 .update_failed_reading_new_landed_blocks(Empty {})
                                 .await,
                         );
+                        "UpdateFailedReadingNewLandedBlocks"
                     }
                     BiddingServiceClientCommand::DestroySlotBidder(destroy_slot_bidder_params) => {
                         Self::handle_error(
                             client.destroy_slot_bidder(destroy_slot_bidder_params).await,
                         );
+                        "DestroySlotBidder"
                     }
+                };
+                let duration = now.elapsed();
+                if duration > Duration::from_millis(1) {
+                    warn!(
+                        duration = duration.as_micros(),
+                        command_name,
+                        "DX BiddingServiceClientAdapter::handle_command took too long",
+                    );
                 }
             }
         });

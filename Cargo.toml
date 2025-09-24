@@ -58,17 +58,17 @@ futures-util = "0.3.31"
 parking_lot = { version = "0.12.3" }
 derivative = "2.2.0"
 
-#rbuilder = {path="./../rbuilder/crates/rbuilder"}
-rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "79916819218cf7eb4b588c568e7dab2ac5f1c930"}
+rbuilder = {path="./../rbuilder/crates/rbuilder"}
+#rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "79916819218cf7eb4b588c568e7dab2ac5f1c930"}
 
-#rbuilder-primitives = {path="./../rbuilder/crates/rbuilder-primitives"}
-rbuilder-primitives = { git = "https://github.com/flashbots/rbuilder.git", rev = "79916819218cf7eb4b588c568e7dab2ac5f1c930"}
+rbuilder-primitives = {path="./../rbuilder/crates/rbuilder-primitives"}
+#rbuilder-primitives = { git = "https://github.com/flashbots/rbuilder.git", rev = "79916819218cf7eb4b588c568e7dab2ac5f1c930"}
 
-#metrics_macros = {path="./../rbuilder/crates/rbuilder/src/telemetry/metrics_macros"}
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "79916819218cf7eb4b588c568e7dab2ac5f1c930"}
+metrics_macros = {path="./../rbuilder/crates/rbuilder/src/telemetry/metrics_macros"}
+#metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "79916819218cf7eb4b588c568e7dab2ac5f1c930"}
 
-#bid-scraper = {path="./../rbuilder/crates/bid-scraper"}
-bid-scraper = { git = "https://github.com/flashbots/rbuilder.git", rev = "79916819218cf7eb4b588c568e7dab2ac5f1c930"}
+bid-scraper = {path="./../rbuilder/crates/bid-scraper"}
+#bid-scraper = { git = "https://github.com/flashbots/rbuilder.git", rev = "79916819218cf7eb4b588c568e7dab2ac5f1c930"}
 
 
 tokio-tungstenite = "0.26.2"

@@ -4,6 +4,7 @@ use rbuilder::{
     },
     utils::offset_datetime_to_timestamp_us,
 };
+use time::OffsetDateTime;
 use tokio::sync::mpsc;
 
 use crate::bidding_service_wrapper::{DestroySlotBidderParams, NewBlockParams};
@@ -41,6 +42,7 @@ impl SlotBidder for UnfinishedBlockBuildingSinkClient {
                 can_add_payout_tx: true,
                 block_id: block_descriptor.id.0,
                 creation_time_us: offset_datetime_to_timestamp_us(block_descriptor.creation_time),
+                protocol_send_time_us: offset_datetime_to_timestamp_us(OffsetDateTime::now_utc()),
             }));
     }
 }

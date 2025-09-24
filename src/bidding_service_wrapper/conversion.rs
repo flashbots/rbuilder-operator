@@ -97,6 +97,7 @@ pub fn real2rpc_block_bid(bid_with_stats: ScrapedRelayBlockBidWithStats) -> Upda
         gas_used: bid.gas_used,
         optimistic_submission: bid.optimistic_submission,
         creation_time_us,
+        protocol_send_time_us: offset_datetime_to_timestamp_us(OffsetDateTime::now_utc()),
     }
 }
 
