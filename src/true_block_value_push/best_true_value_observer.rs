@@ -4,8 +4,8 @@ use rbuilder::{
     live_builder::{
         block_output::bidding_service_interface::BidObserver, payload_events::MevBoostSlotData,
     },
-    mev_boost::submission::SubmitBlockRequest,
 };
+use rbuilder_primitives::mev_boost::SubmitBlockRequest;
 use redis::RedisError;
 use reth::primitives::SealedBlock;
 use tokio_util::sync::CancellationToken;

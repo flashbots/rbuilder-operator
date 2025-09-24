@@ -9,12 +9,12 @@ use rbuilder::{
     live_builder::{
         block_output::bidding_service_interface::BidObserver, payload_events::MevBoostSlotData,
     },
-    mev_boost::submission::SubmitBlockRequest,
-    primitives::{
-        serialize::{RawBundle, RawShareBundle},
-        Bundle, Order,
-    },
     utils::error_storage::store_error_event,
+};
+use rbuilder_primitives::{
+    mev_boost::SubmitBlockRequest,
+    serialize::{RawBundle, RawShareBundle},
+    Bundle, Order,
 };
 use reth::primitives::SealedBlock;
 use serde::{Deserialize, Serialize};
