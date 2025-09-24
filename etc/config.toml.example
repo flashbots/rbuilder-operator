@@ -1,9 +1,0 @@
-# Example configuration for rbuilder-operator
-# This file should be customized for your specific setup
-
-# Basic settings
-datadir = "/var/lib/rbuilder-operator/data"
-log_level = "info"
-
-# Add your specific configuration options here
-# See config-live-example.toml for more detailed examples

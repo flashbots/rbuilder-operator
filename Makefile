@@ -47,8 +47,9 @@ build-reproducible: ## Build reproducible static binary for x86_64
 		echo "Error: Reproducible builds are only supported for x86_64-unknown-linux-gnu, not $(TARGET)"; \
 		exit 1; \
 	fi
-	SOURCE_DATE_EPOCH=$(SOURCE_DATE) \
-	RUSTFLAGS="-C symbol-mangling-version=v0 -C strip=none -C link-arg=-Wl,--build-id=none -C metadata='' --remap-path-prefix $$(pwd)=." \
+	SOURCE_DATE_EPOCH=$(shell git log -1 --pretty=%ct) \
+	RUSTFLAGS="-C link-arg=-Wl,--build-id=none -C metadata='' --remap-path-prefix $$(pwd)=." \
+	CARGO_INCREMENTAL=0 \
 	LC_ALL=C \
 	TZ=UTC \
 	cargo build --bin rbuilder --profile "reproducible" --locked --target x86_64-unknown-linux-gnu
