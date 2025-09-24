@@ -2013,7 +2013,7 @@ dependencies = [
 [[package]]
 name = "bid-scraper"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=79916819218cf7eb4b588c568e7dab2ac5f1c930#79916819218cf7eb4b588c568e7dab2ac5f1c930"
 dependencies = [
  "alloy-primitives 1.3.1",
  "alloy-provider",
@@ -3930,7 +3930,7 @@ dependencies = [
 [[package]]
 name = "eth-sparse-mpt"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=79916819218cf7eb4b588c568e7dab2ac5f1c930#79916819218cf7eb4b588c568e7dab2ac5f1c930"
 dependencies = [
  "alloy-primitives 1.3.1",
  "alloy-rlp",
@@ -6884,7 +6884,7 @@ dependencies = [
 [[package]]
 name = "metrics_macros"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=79916819218cf7eb4b588c568e7dab2ac5f1c930#79916819218cf7eb4b588c568e7dab2ac5f1c930"
 dependencies = [
  "proc-macro2 1.0.95",
  "quote 1.0.40",
@@ -9061,7 +9061,7 @@ dependencies = [
 [[package]]
 name = "rbuilder"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=79916819218cf7eb4b588c568e7dab2ac5f1c930#79916819218cf7eb4b588c568e7dab2ac5f1c930"
 dependencies = [
  "ahash",
  "alloy-chains",
@@ -9120,6 +9120,7 @@ dependencies = [
  "quick_cache",
  "rand 0.8.5",
  "rayon",
+ "rbuilder-primitives",
  "reipc",
  "reqwest 0.12.15",
  "reth",
@@ -9203,6 +9204,7 @@ dependencies = [
  "prost 0.11.9",
  "rand 0.8.5",
  "rbuilder",
+ "rbuilder-primitives",
  "redis",
  "reqwest 0.11.27",
  "reth",
@@ -9224,6 +9226,48 @@ dependencies = [
  "tower 0.4.13",
  "tracing",
  "url",
+ "uuid",
+]
+
+[[package]]
+name = "rbuilder-primitives"
+version = "0.1.0"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=79916819218cf7eb4b588c568e7dab2ac5f1c930#79916819218cf7eb4b588c568e7dab2ac5f1c930"
+dependencies = [
+ "ahash",
+ "alloy-consensus 1.0.29",
+ "alloy-eips 1.0.29",
+ "alloy-primitives 1.3.1",
+ "alloy-rlp",
+ "alloy-rpc-types",
+ "alloy-rpc-types-beacon",
+ "alloy-rpc-types-engine",
+ "alloy-rpc-types-eth 1.0.29",
+ "derivative",
+ "derive_more 2.0.1",
+ "ethereum-consensus",
+ "ethereum_ssz 0.9.0",
+ "ethereum_ssz_derive",
+ "eyre",
+ "governor",
+ "integer-encoding",
+ "reqwest 0.12.15",
+ "reth",
+ "reth-chainspec",
+ "reth-ethereum-primitives",
+ "reth-node-core",
+ "reth-primitives",
+ "reth-primitives-traits",
+ "revm",
+ "revm-inspectors",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "sha2 0.10.9",
+ "thiserror 1.0.69",
+ "time",
+ "toml 0.8.20",
+ "tracing",
  "uuid",
 ]
 
@@ -14017,7 +14061,7 @@ dependencies = [
 [[package]]
 name = "sysperf"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=79916819218cf7eb4b588c568e7dab2ac5f1c930#79916819218cf7eb4b588c568e7dab2ac5f1c930"
 dependencies = [
  "alloy-primitives 1.3.1",
  "num_cpus",
@@ -14139,7 +14183,7 @@ checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 [[package]]
 name = "test_utils"
 version = "0.1.0"
-source = "git+https://github.com/flashbots/rbuilder.git?rev=634bc483f24aa9d5ede591ed1800638d4dccb3af#634bc483f24aa9d5ede591ed1800638d4dccb3af"
+source = "git+https://github.com/flashbots/rbuilder.git?rev=79916819218cf7eb4b588c568e7dab2ac5f1c930#79916819218cf7eb4b588c568e7dab2ac5f1c930"
 dependencies = [
  "proc-macro2 1.0.95",
  "quote 1.0.40",

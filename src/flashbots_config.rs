@@ -20,7 +20,6 @@ use rbuilder::live_builder::config::{
     SpecificBuilderConfig,
 };
 use rbuilder::live_builder::payload_events::MevBoostSlotData;
-use rbuilder::mev_boost::submission::SubmitBlockRequest;
 use rbuilder::provider::StateProviderFactory;
 use rbuilder::{
     building::builders::{BacktestSimulateBlockInput, Block},
@@ -29,6 +28,7 @@ use rbuilder::{
     },
     utils::build_info::Version,
 };
+use rbuilder_primitives::mev_boost::SubmitBlockRequest;
 use reth::primitives::SealedBlock;
 use serde::Deserialize;
 use serde_with::serde_as;
