@@ -137,5 +137,4 @@ message Bid {
 // Since this is not mapped to an enum we must be careful to manually update BiddingServiceClientAdapter.
 message Callback {
     Bid bid = 1;
-    optional bool can_use_suggested_fee_recipient_as_coinbase_change = 2;
 }

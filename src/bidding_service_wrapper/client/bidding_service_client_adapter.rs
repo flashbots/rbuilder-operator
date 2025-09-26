@@ -1,9 +1,9 @@
 use alloy_primitives::U256;
 use rbuilder::{
+    building::builders::BuiltBlockId,
     live_builder::block_output::bidding_service_interface::{
-        BiddingService, BlockId, BlockSealInterfaceForSlotBidder,
-        LandedBlockInfo as RealLandedBlockInfo, ScrapedRelayBlockBidWithStats, SlotBidder,
-        SlotBidderSealBidCommand, SlotBlockId,
+        BiddingService, BlockSealInterfaceForSlotBidder, LandedBlockInfo as RealLandedBlockInfo,
+        ScrapedRelayBlockBidWithStats, SlotBidder, SlotBidderSealBidCommand, SlotBlockId,
     },
     utils::{
         build_info::Version, offset_datetime_to_timestamp_us, timestamp_us_to_offset_datetime,
@@ -18,12 +18,12 @@ use std::{
     time::{Duration, Instant},
 };
 use time::OffsetDateTime;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
-use tracing::{error, trace, warn};
+use tracing::{error, warn};
 
 use crate::{
     bidding_service_wrapper::{
@@ -72,6 +72,7 @@ pub enum BiddingServiceClientCommand {
 #[derive(Debug)]
 pub struct BiddingServiceClientAdapter {
     commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
+    block_sender: watch::Sender<NewBlockParams>,
     last_session_id: AtomicU64,
 }
 
@@ -93,9 +94,11 @@ impl BiddingServiceClientAdapter {
         uds_path: &str,
         landed_blocks_history: &[RealLandedBlockInfo],
     ) -> Result<Self> {
-        let commands_sender = Self::init_sender_task(uds_path, landed_blocks_history).await?;
+        let (commands_sender, block_sender) =
+            Self::init_sender_task(uds_path, landed_blocks_history).await?;
         Ok(Self {
             commands_sender,
+            block_sender,
             last_session_id: AtomicU64::new(0),
         })
     }
@@ -107,14 +110,27 @@ impl BiddingServiceClientAdapter {
     async fn init_sender_task(
         uds_path: &str,
         landed_blocks_history: &[RealLandedBlockInfo],
-    ) -> Result<mpsc::UnboundedSender<BiddingServiceClientCommand>> {
+    ) -> Result<(
+        mpsc::UnboundedSender<BiddingServiceClientCommand>,
+        watch::Sender<NewBlockParams>,
+    )> {
+        let (block_sender, mut block_recv) = watch::channel(NewBlockParams {
+            session_id: 0,
+            true_block_value: vec![],
+            can_add_payout_tx: false,
+            block_id: 0,
+            creation_time_us: 0,
+            protocol_send_time_us: 0,
+        });
         let uds_path = uds_path.to_string();
         // Url us dummy but needed to create the Endpoint.
         let channel = Endpoint::try_from("http://[::]:50051")
             .unwrap()
+            .tcp_nodelay(true)
             .connect_with_connector(service_fn(move |_: Uri| {
                 // Connect to a Uds socket
                 let path = PathBuf::from(uds_path.clone());
+                warn!("DX connect to unix socket");
                 tokio::net::UnixStream::connect(path)
             }))
             .await?;
@@ -139,72 +155,113 @@ impl BiddingServiceClientAdapter {
         let (commands_sender, mut rx) = mpsc::unbounded_channel::<BiddingServiceClientCommand>();
         // Spawn a task to execute received futures
         tokio::spawn(async move {
-            while let Some(command) = rx.recv().await {
-                let now = Instant::now();
-                let command_name = match command {
-                    BiddingServiceClientCommand::CreateSlotBidder(create_slot_data) => {
-                        Self::create_slot_bidder(&mut client, create_slot_data).await;
-                        "CreateSlotBidder"
-                    }
-                    BiddingServiceClientCommand::NewBlock(mut new_block_params) => {
-                        let traveling_us =
-                            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc())
-                                - new_block_params.protocol_send_time_us;
-                        if traveling_us > 1000 {
-                            warn!(traveling_us, "DX NewBlock traveling time too long",);
+            loop {
+                tokio::select! {
+                    command = rx.recv() => {
+                        if let Some(command) = command {
+                            Self::handle_command(command, &mut client).await;
+                        }else{
+                            return;
                         }
-                        new_block_params.protocol_send_time_us =
-                            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc());
-                        Self::handle_error(client.new_block(new_block_params).await);
-                        "NewBlock"
                     }
-                    BiddingServiceClientCommand::UpdateNewBid(mut update_new_bid_params) => {
-                        let traveling_us =
-                            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc())
-                                - update_new_bid_params.protocol_send_time_us;
-                        if traveling_us > 1000 {
-                            warn!(traveling_us, "DX UpdateNewBid traveling time too long",);
+                    block_changed_res = block_recv.changed() => {
+                        match block_changed_res {
+                            Ok(()) => {
+                                let block = (*block_recv.borrow_and_update()).clone();
+                                Self::handle_new_block(block, &mut client).await;
+                            }
+                            Err(_) => {
+                                return;
+                            }
                         }
-
-                        update_new_bid_params.protocol_send_time_us =
-                            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc());
-                        Self::handle_error(client.update_new_bid(update_new_bid_params).await);
-                        "UpdateNewBid"
                     }
-                    BiddingServiceClientCommand::MustWinBlock(must_win_block_params) => {
-                        Self::handle_error(client.must_win_block(must_win_block_params).await);
-                        "MustWinBlock"
-                    }
-                    BiddingServiceClientCommand::UpdateNewLandedBlocksDetected(params) => {
-                        Self::handle_error(client.update_new_landed_blocks_detected(params).await);
-                        "UpdateNewLandedBlocksDetected"
-                    }
-                    BiddingServiceClientCommand::UpdateFailedReadingNewLandedBlocks => {
-                        Self::handle_error(
-                            client
-                                .update_failed_reading_new_landed_blocks(Empty {})
-                                .await,
-                        );
-                        "UpdateFailedReadingNewLandedBlocks"
-                    }
-                    BiddingServiceClientCommand::DestroySlotBidder(destroy_slot_bidder_params) => {
-                        Self::handle_error(
-                            client.destroy_slot_bidder(destroy_slot_bidder_params).await,
-                        );
-                        "DestroySlotBidder"
-                    }
-                };
-                let duration = now.elapsed();
-                if duration > Duration::from_millis(1) {
-                    warn!(
-                        duration = duration.as_micros(),
-                        command_name,
-                        "DX BiddingServiceClientAdapter::handle_command took too long",
-                    );
                 }
             }
+            /*while let Some(command) = rx.recv().await {
+                handle_command(command, &mut client).await;
+            }*/
         });
-        Ok(commands_sender)
+        Ok((commands_sender, block_sender))
+    }
+
+    async fn handle_new_block(
+        mut new_block_params: NewBlockParams,
+        client: &mut BiddingServiceClient<Channel>,
+    ) {
+        let traveling_us = offset_datetime_to_timestamp_us(OffsetDateTime::now_utc())
+            - new_block_params.protocol_send_time_us;
+        if traveling_us > 1000 {
+            warn!(
+                traveling_us,
+                "DX init_sender_task NewBlock queued time too long",
+            );
+        }
+        new_block_params.protocol_send_time_us =
+            offset_datetime_to_timestamp_us(OffsetDateTime::now_utc());
+        Self::handle_error(client.new_block(new_block_params).await);
+    }
+
+    async fn handle_command(
+        command: BiddingServiceClientCommand,
+        client: &mut BiddingServiceClient<Channel>,
+    ) {
+        let now = Instant::now();
+        let command_name = match command {
+            BiddingServiceClientCommand::CreateSlotBidder(create_slot_data) => {
+                Self::create_slot_bidder(client, create_slot_data).await;
+                "CreateSlotBidder"
+            }
+            BiddingServiceClientCommand::NewBlock(new_block_params) => {
+                Self::handle_new_block(new_block_params, client).await;
+                "NewBlock"
+            }
+            BiddingServiceClientCommand::UpdateNewBid(mut update_new_bid_params) => {
+                let traveling_us = offset_datetime_to_timestamp_us(OffsetDateTime::now_utc())
+                    - update_new_bid_params.protocol_send_time_us;
+                if traveling_us > 1000 {
+                    warn!(
+                        traveling_us,
+                        "DX init_sender_task UpdateNewBid queue time too long",
+                    );
+                }
+
+                update_new_bid_params.protocol_send_time_us =
+                    offset_datetime_to_timestamp_us(OffsetDateTime::now_utc());
+                let mut client = client.clone();
+                tokio::spawn(async move {
+                    Self::handle_error(client.update_new_bid(update_new_bid_params).await);
+                });
+                //Self::handle_error(client.update_new_bid(update_new_bid_params).await);
+                "UpdateNewBid"
+            }
+            BiddingServiceClientCommand::MustWinBlock(must_win_block_params) => {
+                Self::handle_error(client.must_win_block(must_win_block_params).await);
+                "MustWinBlock"
+            }
+            BiddingServiceClientCommand::UpdateNewLandedBlocksDetected(params) => {
+                Self::handle_error(client.update_new_landed_blocks_detected(params).await);
+                "UpdateNewLandedBlocksDetected"
+            }
+            BiddingServiceClientCommand::UpdateFailedReadingNewLandedBlocks => {
+                Self::handle_error(
+                    client
+                        .update_failed_reading_new_landed_blocks(Empty {})
+                        .await,
+                );
+                "UpdateFailedReadingNewLandedBlocks"
+            }
+            BiddingServiceClientCommand::DestroySlotBidder(destroy_slot_bidder_params) => {
+                Self::handle_error(client.destroy_slot_bidder(destroy_slot_bidder_params).await);
+                "DestroySlotBidder"
+            }
+        };
+        let duration = now.elapsed();
+        if duration > Duration::from_millis(1) {
+            warn!(
+                duration = duration.as_micros(),
+                command_name, "DX BiddingServiceClientAdapter::handle_command took too long",
+            );
+        }
     }
 
     fn parse_option_u256(limbs: Vec<u64>) -> Option<U256> {
@@ -230,40 +287,43 @@ impl BiddingServiceClientAdapter {
                 tokio::spawn(async move {
                     loop {
                         tokio::select! {
-                                _ = create_slot_bidder_data.cancel.cancelled() => {
+                            _ = create_slot_bidder_data.cancel.cancelled() => {
+                                return;
+                            }
+                            callback = stream.next() => {
+                                let recv_time = offset_datetime_to_timestamp_us(OffsetDateTime::now_utc());
+                                if let Some(Ok(callback)) = callback {
+                                    if let Some(bid) = callback.bid {
+                                        let traveling_us = recv_time - bid.protocol_send_time_us;
+                                        if traveling_us > 1000 {
+                                            warn!(
+                                                traveling_us,
+                                                "DX create_slot_bidder task bid traveling time too long",
+                                            );
+                                        }
+                                        let payout_tx_value = Self::parse_option_u256(bid.payout_tx_value);
+                                        let seen_competition_bid = Self::parse_option_u256(bid.seen_competition_bid);
+                                        let trigger_creation_time = bid.trigger_creation_time_us.map(timestamp_us_to_offset_datetime);
+                                        let payout_tx_value = if let Some(payout_tx_value) = payout_tx_value {
+                                            payout_tx_value
+                                        } else {
+                                            warn!("payout_tx_value is None");
+                                            continue;
+                                        };
+                                        let seal_command = SlotBidderSealBidCommand {
+                                            block_id: BuiltBlockId(bid.block_id),
+                                            payout_tx_value,
+                                            seen_competition_bid,
+                                            trigger_creation_time,
+                                        };
+                                        create_slot_bidder_data.block_seal_handle.seal_bid(seal_command);
+                                    }
+                                }
+                                else {
                                     return;
                                 }
-                                callback = stream.next() => {
-                                    if let Some(Ok(callback)) = callback {
-                                        if let Some(bid) = callback.bid {
-                                            let payout_tx_value = Self::parse_option_u256(bid.payout_tx_value);
-                                            let seen_competition_bid = Self::parse_option_u256(bid.seen_competition_bid);
-                                            let trigger_creation_time = bid.trigger_creation_time_us.map(timestamp_us_to_offset_datetime);
-                        let payout_tx_value = if let Some(payout_tx_value) = payout_tx_value {
-                        payout_tx_value
-                        } else {
-                        warn!("payout_tx_value is None");
-                        continue;
-                        };
-
-                        let seal_command = SlotBidderSealBidCommand {
-                        block_id: BlockId(bid.block_id),
-                        payout_tx_value,
-                        seen_competition_bid,
-                        trigger_creation_time,
-                        };
-                        create_slot_bidder_data.block_seal_handle.seal_bid(seal_command);
-                                        } else if let Some(value) = callback.can_use_suggested_fee_recipient_as_coinbase_change {
-
-                        // do nothing as can_use_suggested_fee_recipient_as_coinbase_change is not supported
-                        trace!(value, "Got can_use_suggested_fee_recipient_as_coinbase_change from bidding service");
-                                        }
-                                    }
-                                    else {
-                                        return;
-                                    }
-                                }
                             }
+                        }
                     }
                 });
             }
@@ -320,6 +380,7 @@ impl BiddingService for BiddingServiceClientAdapter {
             ));
         Arc::new(UnfinishedBlockBuildingSinkClient::new(
             session_id,
+            self.block_sender.clone(),
             self.commands_sender.clone(),
         ))
     }

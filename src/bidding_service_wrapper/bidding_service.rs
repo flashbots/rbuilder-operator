@@ -159,8 +159,6 @@ pub struct Bid {
 pub struct Callback {
     #[prost(message, optional, tag = "1")]
     pub bid: ::core::option::Option<Bid>,
-    #[prost(bool, optional, tag = "2")]
-    pub can_use_suggested_fee_recipient_as_coinbase_change: ::core::option::Option<bool>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
