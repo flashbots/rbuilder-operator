@@ -1,4 +1,4 @@
-use alloy_primitives::{BlockHash, U256};
+use alloy_primitives::{Address, BlockHash, U256};
 use exponential_backoff::Backoff;
 use jsonrpsee::{
     core::{client::ClientT, traits::ToRpcParams},
@@ -14,7 +14,7 @@ use rbuilder::{
 use rbuilder_primitives::{
     mev_boost::SubmitBlockRequest,
     serialize::{RawBundle, RawShareBundle},
-    Bundle, Order,
+    Bundle, Order, OrderId,
 };
 use reth::primitives::SealedBlock;
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use std::{sync::Arc, time::Duration};
 use time::format_description::well_known;
 use tracing::{error, warn, Span};
+use uuid::Uuid;
 
 use crate::metrics::inc_submit_block_errors;
 
@@ -67,6 +68,14 @@ struct BlocksProcessorHeader {
     pub number: Option<U256>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[serde(rename_all = "camelCase")]
+struct BlockProcessorDelayedPayments {
+    source: Uuid,
+    value: U256,
+    address: Address,
+}
+
 type ConsumeBuiltBlockRequest = (
     BlocksProcessorHeader,
     String,
@@ -78,6 +87,7 @@ type ConsumeBuiltBlockRequest = (
     String,
     U256,
     U256,
+    Vec<BlockProcessorDelayedPayments>,
 );
 
 /// Struct to avoid copying ConsumeBuiltBlockRequest since HttpClient::request eats the parameter.
@@ -187,6 +197,36 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
 
         let used_share_bundles = Self::get_used_sbundles(built_block_trace);
 
+        let delayed_payments = built_block_trace
+            .included_orders
+            .iter()
+            .filter_map(|res| {
+                let delayed_kickback = if let Some(k) = &res.delayed_kickback {
+                    k
+                } else {
+                    return None;
+                };
+
+                if delayed_kickback.should_pay_in_block {
+                    return None;
+                }
+
+                let bundle_uuid = match res.order.id() {
+                    OrderId::Bundle(uuid) => uuid,
+                    _ => {
+                        error!(order = ?res.order.id(), "Delayed kickback is found for non-bundle");
+                        return None;
+                    }
+                };
+
+                Some(BlockProcessorDelayedPayments {
+                    source: bundle_uuid,
+                    value: delayed_kickback.payout_value,
+                    address: delayed_kickback.recipient,
+                })
+            })
+            .collect();
+
         let params: ConsumeBuiltBlockRequest = (
             header,
             closed_at,
@@ -198,6 +238,7 @@ impl<HttpClientType: ClientT> BlocksProcessorClient<HttpClientType> {
             builder_name,
             built_block_trace.true_bid_value,
             best_bid_value,
+            delayed_payments,
         );
         let request = ConsumeBuiltBlockRequestArc::new(params);
         let backoff = backoff();
@@ -374,5 +415,20 @@ mod tests {
         let total_sleep_time = total_sleep_time.as_secs();
         dbg!(total_sleep_time);
         assert!(total_sleep_time > 40 && total_sleep_time < 90);
+    }
+
+    #[test]
+    fn test_delayed_payment_serialize() {
+        let value = BlockProcessorDelayedPayments {
+            address: alloy_primitives::address!("93Ea7cB31f76B982601321b2A0d93Ec9A948236D"),
+            value: U256::from(16),
+            source: Uuid::try_parse("ff7b2232-b30d-4889-9258-c3632ba4bfc0").unwrap(),
+        };
+
+        let value_str = serde_json::to_string(&value).unwrap();
+
+        let expected_str = r#"{"source":"ff7b2232-b30d-4889-9258-c3632ba4bfc0","value":"0x10","address":"0x93ea7cb31f76b982601321b2a0d93ec9a948236d"}"#;
+
+        assert_eq!(value_str, expected_str);
     }
 }
