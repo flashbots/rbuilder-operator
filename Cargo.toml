@@ -59,16 +59,16 @@ parking_lot = { version = "0.12.3" }
 derivative = "2.2.0"
 
 #rbuilder = {path="./../rbuilder/crates/rbuilder"}
-rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "8ac0565baf3fb46271f4f4ed73425c5b5a31fafb"}
+rbuilder = { git = "https://github.com/flashbots/rbuilder.git", rev = "fca074ecff70bfdf6fe79c40945cfaa6ed865b5c"}
 
 #rbuilder-primitives = {path="./../rbuilder/crates/rbuilder-primitives"}
-rbuilder-primitives = { git = "https://github.com/flashbots/rbuilder.git", rev = "8ac0565baf3fb46271f4f4ed73425c5b5a31fafb"}
+rbuilder-primitives = { git = "https://github.com/flashbots/rbuilder.git", rev = "fca074ecff70bfdf6fe79c40945cfaa6ed865b5c"}
 
 #metrics_macros = {path="./../rbuilder/crates/rbuilder/src/telemetry/metrics_macros"}
-metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "8ac0565baf3fb46271f4f4ed73425c5b5a31fafb"}
+metrics_macros =  { git = "https://github.com/flashbots/rbuilder.git", rev = "fca074ecff70bfdf6fe79c40945cfaa6ed865b5c"}
 
 #bid-scraper = {path="./../rbuilder/crates/bid-scraper"}
-bid-scraper = { git = "https://github.com/flashbots/rbuilder.git", rev = "8ac0565baf3fb46271f4f4ed73425c5b5a31fafb"}
+bid-scraper = { git = "https://github.com/flashbots/rbuilder.git", rev = "fca074ecff70bfdf6fe79c40945cfaa6ed865b5c"}
 
 
 tokio-tungstenite = "0.26.2"
