@@ -1,9 +1,6 @@
 use alloy_primitives::{Address, BlockHash, U256};
 use exponential_backoff::Backoff;
-use jsonrpsee::{
-    core::{client::ClientT, traits::ToRpcParams},
-    http_client::{HttpClient, HttpClientBuilder},
-};
+use jsonrpsee::core::{client::ClientT, traits::ToRpcParams};
 use rbuilder::{
     building::BuiltBlockTrace,
     live_builder::{
@@ -28,8 +25,7 @@ use uuid::Uuid;
 use crate::metrics::inc_submit_block_errors;
 
 const BLOCK_PROCESSOR_ERROR_CATEGORY: &str = "block_processor";
-const DEFAULT_BLOCK_CONSUME_BUILT_BLOCK_METHOD: &str = "block_consumeBuiltBlockV2";
-pub const SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD: &str = "flashbots_consumeBuiltBlockV2";
+pub const SIGNED_BLOCK_CONSUME_BUILT_BLOCK_METHOD: &str = "flashbots_consumeBuiltBlockV3";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -121,22 +117,6 @@ impl ToRpcParams for ConsumeBuiltBlockRequestArc {
 pub struct BlocksProcessorClient<HttpClientType> {
     client: HttpClientType,
     consume_built_block_method: &'static str,
-}
-
-impl BlocksProcessorClient<HttpClient> {
-    pub fn try_from(
-        url: &str,
-        max_request_size: u32,
-        max_concurrent_requests: usize,
-    ) -> eyre::Result<Self> {
-        Ok(Self {
-            client: HttpClientBuilder::default()
-                .max_request_size(max_request_size)
-                .max_concurrent_requests(max_concurrent_requests)
-                .build(url)?,
-            consume_built_block_method: DEFAULT_BLOCK_CONSUME_BUILT_BLOCK_METHOD,
-        })
-    }
 }
 
 /// RawBundle::encode_no_blobs but more compatible.
