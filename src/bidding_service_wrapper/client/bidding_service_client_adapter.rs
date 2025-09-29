@@ -30,7 +30,7 @@ use crate::{
         bidding_service_client::BiddingServiceClient,
         conversion::{real2rpc_block_bid, real2rpc_block_hash, real2rpc_landed_block_info},
         CreateSlotBidderParams, DestroySlotBidderParams, Empty, LandedBlocksParams,
-        MustWinBlockParams, NewBlockParams, UpdateNewBidParams,
+        MustWinBlockParams, NewBid, NewBlockParams, UpdateNewBidsParams,
     },
     metrics::set_bidding_service_version,
 };
@@ -56,7 +56,6 @@ impl std::fmt::Debug for CreateSlotBidderCommandData {
 pub enum BiddingServiceClientCommand {
     CreateSlotBidder(CreateSlotBidderCommandData),
     NewBlock(NewBlockParams),
-    UpdateNewBid(UpdateNewBidParams),
     MustWinBlock(MustWinBlockParams),
     UpdateNewLandedBlocksDetected(LandedBlocksParams),
     UpdateFailedReadingNewLandedBlocks,
@@ -72,6 +71,7 @@ pub enum BiddingServiceClientCommand {
 #[derive(Debug)]
 pub struct BiddingServiceClientAdapter {
     commands_sender: mpsc::UnboundedSender<BiddingServiceClientCommand>,
+    bids_sender: mpsc::UnboundedSender<NewBid>,
     block_sender: watch::Sender<NewBlockParams>,
     last_session_id: AtomicU64,
 }
@@ -87,19 +87,21 @@ pub enum Error {
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
-
+/// Max number of bids to send in a single call to update_new_bids.
+const SEND_BIDS_BULK_MAX: usize = 1;
 impl BiddingServiceClientAdapter {
     /// @Remove async and reconnect on all create_slot_bidder calls.
     pub async fn new(
         uds_path: &str,
         landed_blocks_history: &[RealLandedBlockInfo],
     ) -> Result<Self> {
-        let (commands_sender, block_sender) =
+        let (commands_sender, block_sender, bids_sender) =
             Self::init_sender_task(uds_path, landed_blocks_history).await?;
         Ok(Self {
             commands_sender,
             block_sender,
             last_session_id: AtomicU64::new(0),
+            bids_sender,
         })
     }
 
@@ -113,6 +115,7 @@ impl BiddingServiceClientAdapter {
     ) -> Result<(
         mpsc::UnboundedSender<BiddingServiceClientCommand>,
         watch::Sender<NewBlockParams>,
+        mpsc::UnboundedSender<NewBid>,
     )> {
         let (block_sender, mut block_recv) = watch::channel(NewBlockParams {
             session_id: 0,
@@ -153,9 +156,11 @@ impl BiddingServiceClientAdapter {
             build_time_utc: bidding_service_version.build_time_utc,
         });
         let (commands_sender, mut rx) = mpsc::unbounded_channel::<BiddingServiceClientCommand>();
+        let (bids_sender, mut bids_recv) = mpsc::unbounded_channel::<NewBid>();
         // Spawn a task to execute received futures
         tokio::spawn(async move {
             loop {
+                let mut new_bids = Vec::new();
                 tokio::select! {
                     command = rx.recv() => {
                         if let Some(command) = command {
@@ -163,6 +168,16 @@ impl BiddingServiceClientAdapter {
                         }else{
                             return;
                         }
+                    }
+                    bids = bids_recv.recv_many(&mut new_bids, SEND_BIDS_BULK_MAX) => {
+                        if bids == 0 {
+                            return;
+                        }
+                        let update_new_bids_params = UpdateNewBidsParams {
+                            bids: new_bids,
+                            protocol_send_time_us: offset_datetime_to_timestamp_us(OffsetDateTime::now_utc()),
+                        };
+                        Self::handle_error(client.update_new_bids(update_new_bids_params).await);
                     }
                     block_changed_res = block_recv.changed() => {
                         match block_changed_res {
@@ -177,11 +192,8 @@ impl BiddingServiceClientAdapter {
                     }
                 }
             }
-            /*while let Some(command) = rx.recv().await {
-                handle_command(command, &mut client).await;
-            }*/
         });
-        Ok((commands_sender, block_sender))
+        Ok((commands_sender, block_sender, bids_sender))
     }
 
     async fn handle_new_block(
@@ -214,25 +226,6 @@ impl BiddingServiceClientAdapter {
             BiddingServiceClientCommand::NewBlock(new_block_params) => {
                 Self::handle_new_block(new_block_params, client).await;
                 "NewBlock"
-            }
-            BiddingServiceClientCommand::UpdateNewBid(mut update_new_bid_params) => {
-                let traveling_us = offset_datetime_to_timestamp_us(OffsetDateTime::now_utc())
-                    - update_new_bid_params.protocol_send_time_us;
-                if traveling_us > 1000 {
-                    warn!(
-                        traveling_us,
-                        "DX init_sender_task UpdateNewBid queue time too long",
-                    );
-                }
-
-                update_new_bid_params.protocol_send_time_us =
-                    offset_datetime_to_timestamp_us(OffsetDateTime::now_utc());
-                let mut client = client.clone();
-                tokio::spawn(async move {
-                    Self::handle_error(client.update_new_bid(update_new_bid_params).await);
-                });
-                //Self::handle_error(client.update_new_bid(update_new_bid_params).await);
-                "UpdateNewBid"
             }
             BiddingServiceClientCommand::MustWinBlock(must_win_block_params) => {
                 Self::handle_error(client.must_win_block(must_win_block_params).await);
@@ -405,11 +398,9 @@ impl BiddingService for BiddingServiceClientAdapter {
             .send(BiddingServiceClientCommand::UpdateFailedReadingNewLandedBlocks);
     }
 
-    fn observe_relay_bids(&self, bid_with_stats: ScrapedRelayBlockBidWithStats) {
-        let _ = self
-            .commands_sender
-            .send(BiddingServiceClientCommand::UpdateNewBid(
-                real2rpc_block_bid(bid_with_stats),
-            ));
+    fn observe_relay_bids(&self, bid_with_stats: Vec<ScrapedRelayBlockBidWithStats>) {
+        for bid in bid_with_stats {
+            let _ = self.bids_sender.send(real2rpc_block_bid(bid));
+        }
     }
 }

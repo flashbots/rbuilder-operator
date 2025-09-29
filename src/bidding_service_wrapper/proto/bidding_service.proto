@@ -25,7 +25,7 @@ service BiddingService {
     rpc UpdateFailedReadingNewLandedBlocks(Empty) returns (Empty);
 
     // BiddingService->BlockBidWithStatsObs
-    rpc UpdateNewBid(UpdateNewBidParams) returns (Empty);
+    rpc UpdateNewBids(UpdateNewBidsParams) returns (Empty);
 
 
     // UnfinishedBlockBuildingSink
@@ -62,7 +62,7 @@ enum PublisherType {
 }
 
 
-message UpdateNewBidParams {
+message NewBid{
     double seen_time = 1;
     string publisher_name = 2;
     PublisherType publisher_type = 3;
@@ -80,8 +80,11 @@ message UpdateNewBidParams {
     optional uint64 gas_used = 15;
     optional bool optimistic_submission = 16;
     uint64 creation_time_us = 17; // For metrics
-    uint64 protocol_send_time_us = 18; // For metrics
+}
 
+message UpdateNewBidsParams {
+    repeated NewBid bids = 1;
+    uint64 protocol_send_time_us = 2; // For metrics
 }
 
 message NewBlockParams{

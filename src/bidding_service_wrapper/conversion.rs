@@ -1,5 +1,7 @@
 //! Conversion real data <-> rpc data
-use crate::bidding_service_wrapper::{LandedBlockInfo as RPCLandedBlockInfo, UpdateNewBidParams};
+use crate::bidding_service_wrapper::{
+    LandedBlockInfo as RPCLandedBlockInfo, NewBid, UpdateNewBidsParams,
+};
 
 use alloy_primitives::{Address, BlockHash, U256};
 use alloy_rpc_types_beacon::BlsPublicKey;
@@ -70,10 +72,10 @@ pub fn rpc2real_block_hash(v: &Vec<u8>) -> Result<BlockHash, Status> {
     BlockHash::try_from(v.as_slice()).map_err(|_| Status::invalid_argument("rpc BlockHash error"))
 }
 
-pub fn real2rpc_block_bid(bid_with_stats: ScrapedRelayBlockBidWithStats) -> UpdateNewBidParams {
+pub fn real2rpc_block_bid(bid_with_stats: ScrapedRelayBlockBidWithStats) -> NewBid {
     let creation_time_us = offset_datetime_to_timestamp_us(bid_with_stats.creation_time);
     let bid = bid_with_stats.bid;
-    UpdateNewBidParams {
+    NewBid {
         seen_time: bid.seen_time,
         publisher_name: bid.publisher_name,
         publisher_type: real2rpc_publisher_type(bid.publisher_type),
@@ -97,14 +99,29 @@ pub fn real2rpc_block_bid(bid_with_stats: ScrapedRelayBlockBidWithStats) -> Upda
         gas_used: bid.gas_used,
         optimistic_submission: bid.optimistic_submission,
         creation_time_us,
+    }
+}
+
+pub fn real2rpc_block_bids(bids: Vec<ScrapedRelayBlockBidWithStats>) -> UpdateNewBidsParams {
+    UpdateNewBidsParams {
         protocol_send_time_us: offset_datetime_to_timestamp_us(OffsetDateTime::now_utc()),
+        bids: bids.into_iter().map(real2rpc_block_bid).collect(),
     }
 }
 
 #[allow(clippy::result_large_err)]
-pub fn rpc2real_block_bid(
-    bid: UpdateNewBidParams,
-) -> Result<ScrapedRelayBlockBidWithStats, Status> {
+pub fn rpc2real_block_bids(
+    bids: UpdateNewBidsParams,
+) -> Result<Vec<ScrapedRelayBlockBidWithStats>, Status> {
+    Ok(bids
+        .bids
+        .into_iter()
+        .map(rpc2real_block_bid)
+        .collect::<Result<Vec<ScrapedRelayBlockBidWithStats>, Status>>()?)
+}
+
+#[allow(clippy::result_large_err)]
+fn rpc2real_block_bid(bid: NewBid) -> Result<ScrapedRelayBlockBidWithStats, Status> {
     Ok(ScrapedRelayBlockBidWithStats::new_for_deserialization(
         ScrapedRelayBlockBid {
             seen_time: bid.seen_time,

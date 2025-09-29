@@ -20,7 +20,7 @@ pub struct MustWinBlockParams {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct UpdateNewBidParams {
+pub struct NewBid {
     #[prost(double, tag = "1")]
     pub seen_time: f64,
     #[prost(string, tag = "2")]
@@ -62,8 +62,14 @@ pub struct UpdateNewBidParams {
     /// For metrics
     #[prost(uint64, tag = "17")]
     pub creation_time_us: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct UpdateNewBidsParams {
+    #[prost(message, repeated, tag = "1")]
+    pub bids: ::prost::alloc::vec::Vec<NewBid>,
     /// For metrics
-    #[prost(uint64, tag = "18")]
+    #[prost(uint64, tag = "2")]
     pub protocol_send_time_us: u64,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -395,9 +401,9 @@ pub mod bidding_service_client {
             self.inner.unary(request.into_request(), path, codec).await
         }
         /// BiddingService->BlockBidWithStatsObs
-        pub async fn update_new_bid(
+        pub async fn update_new_bids(
             &mut self,
-            request: impl tonic::IntoRequest<super::UpdateNewBidParams>,
+            request: impl tonic::IntoRequest<super::UpdateNewBidsParams>,
         ) -> Result<tonic::Response<super::Empty>, tonic::Status> {
             self.inner
                 .ready()
@@ -410,7 +416,7 @@ pub mod bidding_service_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/bidding_service.BiddingService/UpdateNewBid",
+                "/bidding_service.BiddingService/UpdateNewBids",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -477,9 +483,9 @@ pub mod bidding_service_server {
             request: tonic::Request<super::Empty>,
         ) -> Result<tonic::Response<super::Empty>, tonic::Status>;
         /// BiddingService->BlockBidWithStatsObs
-        async fn update_new_bid(
+        async fn update_new_bids(
             &self,
-            request: tonic::Request<super::UpdateNewBidParams>,
+            request: tonic::Request<super::UpdateNewBidsParams>,
         ) -> Result<tonic::Response<super::Empty>, tonic::Status>;
         /// UnfinishedBlockBuildingSink
         async fn new_block(
@@ -800,13 +806,13 @@ pub mod bidding_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/bidding_service.BiddingService/UpdateNewBid" => {
+                "/bidding_service.BiddingService/UpdateNewBids" => {
                     #[allow(non_camel_case_types)]
-                    struct UpdateNewBidSvc<T: BiddingService>(pub Arc<T>);
+                    struct UpdateNewBidsSvc<T: BiddingService>(pub Arc<T>);
                     impl<
                         T: BiddingService,
-                    > tonic::server::UnaryService<super::UpdateNewBidParams>
-                    for UpdateNewBidSvc<T> {
+                    > tonic::server::UnaryService<super::UpdateNewBidsParams>
+                    for UpdateNewBidsSvc<T> {
                         type Response = super::Empty;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
@@ -814,11 +820,11 @@ pub mod bidding_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::UpdateNewBidParams>,
+                            request: tonic::Request<super::UpdateNewBidsParams>,
                         ) -> Self::Future {
                             let inner = self.0.clone();
                             let fut = async move {
-                                (*inner).update_new_bid(request).await
+                                (*inner).update_new_bids(request).await
                             };
                             Box::pin(fut)
                         }
@@ -828,7 +834,7 @@ pub mod bidding_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = UpdateNewBidSvc(inner);
+                        let method = UpdateNewBidsSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
