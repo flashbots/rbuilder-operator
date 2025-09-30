@@ -88,7 +88,7 @@ pub enum Error {
 
 pub type Result<T> = core::result::Result<T, Error>;
 /// Max number of bids to send in a single call to update_new_bids.
-const SEND_BIDS_BULK_MAX: usize = 1;
+const SEND_BIDS_BULK_MAX: usize = 100;
 impl BiddingServiceClientAdapter {
     /// @Remove async and reconnect on all create_slot_bidder calls.
     pub async fn new(
